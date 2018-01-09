@@ -4,6 +4,8 @@ var mqttClient = mqtt.connect('mqtt://localhost:1883', {
     clientId: 'nodeServer'
 });
 
+// suzi was here
+
 mqttClient.on('connect', (connack) => {  
   if (connack.sessionPresent) {
     console.log('Already subbed, no subbing necessary');
