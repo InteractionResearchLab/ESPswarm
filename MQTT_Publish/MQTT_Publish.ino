@@ -1,173 +1,160 @@
 /*
- * ESP8266 (Adafruit HUZZAH) Mosquitto MQTT Publish Example
- * Thomas Varnish (https://github.com/tvarnish), (https://www.instructables.com/member/Tango172)
- * Made as part of my MQTT Instructable - "How to use MQTT with the Raspberry Pi and ESP8266"
- */
-#include <Bounce2.h> // Used for "debouncing" the pushbutton
-#include <ESP8266WiFi.h> // Enables the ESP8266 to connect to the local network (via WiFi)
-#include <PubSubClient.h> // Allows us to connect to, and publish to the MQTT broker
+ Basic ESP8266 MQTT example
 
-const int ledPin = 2; // This code uses the built-in led for visual feedback that the button has been pressed
-const int buttonPin = 13; // Connect your button to pin #13
+ This sketch demonstrates the capabilities of the pubsub library in combination
+ with the ESP8266 board/library.
 
-// WiFi
-// Make sure to update this for your own WiFi network!
+ It connects to an MQTT server then:
+  - publishes "hello world" to the topic "outTopic" every two seconds
+  - subscribes to the topic "inTopic", printing out any messages
+    it receives. NB - it assumes the received payloads are strings not binary
+  - If the first character of the topic "inTopic" is an 1, switch ON the ESP Led,
+    else switch it off
+
+ It will reconnect to the server if the connection is lost using a blocking
+ reconnect function. See the 'mqtt_reconnect_nonblocking' example for how to
+ achieve the same result without blocking the main loop.
+
+ To install the ESP8266 board, (using Arduino 1.6.4+):
+  - Add the following 3rd party board manager under "File -> Preferences -> Additional Boards Manager URLs":
+       http://arduino.esp8266.com/stable/package_esp8266com_index.json
+  - Open the "Tools -> Board -> Board Manager" and click install for the ESP8266"
+  - Select your ESP8266 in "Tools -> Board"
+
+*/
+
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+
+// Update these with values suitable for your network.
+
 const char* ssid = "IAAC-WIFI";
-const char* wifi_password = "enteriaac2013";
-
-// MQTT
-// Make sure to update this for your own MQTT Broker!
+const char* password = "enteriaac2013";
 const char* mqtt_server = "192.168.5.71";
-const char* mqtt_topic = "test";
-const char* mqtt_topic_subscribe = "animation";
-// The client id identifies the ESP8266 device. Think of it a bit like a hostname (Or just a name, like Greg).
-const char* clientID = "espSerhan";
 
-bool LEDlit = false;
-
-void ReceivedMessage(char* topic, byte* payload, unsigned int length) {
-  // Output the first character of the message to serial (debug)
-  Serial.print("Received Message fron Animantion");
-  Serial.println((char)payload[0]);
-
-  // Handle the message we received
-  // Here, we are only looking at the first character of the received message (payload[0])
-  // If it is 0, turn the led off.
-  // If it is 1, turn the led on.
-  if ((char)payload[0] == '0') {
-    digitalWrite(ledPin, HIGH); // Notice for the HUZZAH Pin 0, HIGH is OFF and LOW is ON. Normally it is the other way around.
-  }
-  if ((char)payload[0] == '1') {
-    digitalWrite(ledPin, LOW);
-  }
-}
+WiFiClient espClient;
+PubSubClient client(espClient);
+long lastMsg = 0;
+char msg[50];
+int value = 0;
 
 
+int ledPin = 2;
 
+void setup_wifi() {
 
-
-
-// Initialise the Pushbutton Bouncer object
-Bounce bouncer = Bounce();
-
-// Initialise the WiFi and MQTT Client objects
-WiFiClient wifiClient;
-PubSubClient client(mqtt_server, 1883, wifiClient); // 1883 is the listener port for the Broker
-
-void setup() {
-  pinMode(ledPin, OUTPUT);
-  pinMode(buttonPin, INPUT);
-
-  // Switch the on-board LED off to start with
-  digitalWrite(ledPin, HIGH);
-
-  // Setup pushbutton Bouncer object
-  bouncer.attach(buttonPin);
-  bouncer.interval(5);
-
-  // Begin Serial on 115200
-  // Remember to choose the correct Baudrate on the Serial monitor!
-  // This is just for debugging purposes
-  Serial.begin(115200);
-
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
 
-  // Connect to the WiFi
-  WiFi.begin(ssid, wifi_password);
+  WiFi.begin(ssid, password);
 
-  // Wait until the connection has been confirmed before continuing
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
 
-  // Debugging - Output the IP Address of the ESP8266
+  Serial.println("");
   Serial.println("WiFi connected");
-  Serial.print("IP address: ");
+  Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+}
 
-  //// subscribe code
-  // Connect to MQTT Broker
-  // setCallback sets the function to be called when a message is received.
-  client.setCallback(ReceivedMessage);
-  //// subscribe code
-
-  // Connect to MQTT Broker
-  // client.connect returns a boolean value to let us know if the connection was successful.
-  // If the connection is failing, make sure you are using the correct MQTT Username and Password (Setup Earlier in the Instructable)
- // if (client.connect(clientID, mqtt_username, mqtt_password)) {
-   if (client.connect(clientID)) {
-    Serial.println("Connected to MQTT Broker!");
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
   }
-  else {
-    Serial.println("Connection to MQTT Broker failed...");
+  Serial.println();
+
+  // Switch on the LED if an 1 was received as first character
+  if ((char)payload[0] == '1') {
+    digitalWrite(ledPin, LOW);   // Turn the LED on (Note that LOW is the voltage level
+    // but actually the LED is on; this is because
+    // it is acive low on the ESP-01)
+  } else {
+    digitalWrite(ledPin, HIGH);  // Turn the LED off by making the voltage HIGH
   }
 
 }
 
-
-bool Connect() {
-  // Connect to MQTT Server and subscribe to the topic
-  //if (client.connect(clientID, mqtt_username, mqtt_password)) {
-  if (client.connect(clientID)) {
-      client.subscribe(mqtt_topic_subscribe);
-      Serial.println("Subscribed to : animation");
-      return true;
-    }
-    else {
-      return false;
-  }
-}
-
-
-void sendDataToMqtt(int data){
-
-    client.publish(mqtt_topic, "1");
-    Serial.println("Button pushed and message sent!");
-    
-//  if (client.publish(mqtt_topic, "1")) {
-//      //char buf[4];
-//      //client.publish(mqtt_topic, itoa(data,buf,10));
-//      Serial.println("Button pushed and message sent!");
-//  }
-//
-//  else {
-//      Serial.println("Message failed to send. Reconnecting to MQTT Broker and trying again");
-//     // client.connect(clientID, mqtt_username, mqtt_password);
-//      client.connect(clientID);
-//      delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
-//     // client.publish(mqtt_topic, "Button pressed!");
-//    }
-  }
-
-
-void lightLed(){
-    if(LEDlit){
-      digitalWrite(2,LOW);
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Attempt to connect
+    if (client.connect("ESP8266Client")) {
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      client.publish("test", "hello world");
+      // ... and resubscribe
+      client.subscribe("animation");
     } else {
-      digitalWrite(2,HIGH);      
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
     }
+  }
 }
 
+void setup() {
+  pinMode(2, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
+  Serial.begin(115200);
+  setup_wifi();
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+}
 
-int counter = 0;
-int threshold = 50;
+int threshold = 60;
+int ledOn = 0;
+int micVal;
+int ledOnTime =2000; // How long th
+int timerLed = 0;
 
 void loop() {
 
-if(!client.connected()){
-    Connect();
-    Serial.println("Reconnected");
+  long now = millis();
+  
+    micVal = analogRead(A0);
+    delay(10);
+    //Serial.println("Ledoff");
+
+    if(micVal > threshold){
+      ledOn = 1;
+      timerLed = millis();
+      Serial.println("Got Hit!!");
+    }
+  
+
+  if(ledOn == 1){
+    digitalWrite(2,LOW);
+    Serial.println("Lit up led");
+    ledOn = 0;
+  }
+
+  
+
+    if (!client.connected()) {
+    reconnect();
   }
   client.loop();
 
-  int data = analogRead(A0);
-  if(data > threshold){
-    sendDataToMqtt(data);
-    lightLed();
-  }
+  
+//  if (now - lastMsg > 2000) {
+//    lastMsg = now;
+//   // ++value;
+//    value = 1;
+//    snprintf (msg, 75, "ESP -  #%ld", value);
+//    Serial.print("Publish message: ");
+//    Serial.println(msg);
+//    client.publish("outTopic", msg);
+//  }
+
 
 }
-
-
