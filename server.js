@@ -13,20 +13,19 @@ mqttClient.on('connect', (connack) => {
     mqttClient.subscribe('test', { qos: 1 });
     animateLEDS();
   }
-});
+});   
 
 function animateLEDS() {
     setInterval(
-        setTimeout(
-            function(){
-                setTimeout(
-                    mqttClient.publish('animation', '0', { qos: 1 })
-                    , 1000
-                );
-                mqttClient.publish('animation', '1', { qos: 1 })
-            }
-            , 1000
-        )
+        function(){
+            mqttClient.publish('animation', '0', { qos: 1 });
+            setTimeout(
+                function(){
+                    mqttClient.publish('animation', '1', { qos: 1 });
+                }
+                , 1000
+            );
+        }
         , 2000
     );
 }
