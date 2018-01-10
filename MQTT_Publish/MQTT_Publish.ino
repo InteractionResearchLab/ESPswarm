@@ -7,12 +7,19 @@ const char* ssid = "IAAC-WIFI";
 const char* password = "enteriaac2013";
 const char* mqtt_server = "192.168.5.225";
 
+/// IMPORTANT change the last digit of the following two lines to give unique identifier
+const char* id = "ESP8266Client-3" ;
+const char* publishID = "ESP - 3";
+const char* chipID[50];
+//String stringOne = ESP.getChipId();
+
+
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
 char msg[50];
 int value = 0;
-
 
 int ledPin = 2;
 
@@ -62,10 +69,10 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect("ESP8266Client")) {
+    if (client.connect(id)) { // IMPORTANT connect each ESP with a unique identifier
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish("test", "hello world");
+     // client.publish("test", "hello world");
       // ... and resubscribe
       client.subscribe("animation");
     } else {
@@ -91,7 +98,7 @@ void setMicThreshold(int i){
         Serial.print(i);
         Serial.print("   Got reading :");
         total += analogRead(A0);
-        delay(10);
+        delay(1);
         Serial.println(analogRead(A0));
       }
       if(i==10){
@@ -106,6 +113,12 @@ void setMicThreshold(int i){
 void setup() {
   pinMode(2, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
   Serial.begin(115200);
+ // char chipId = ESP.getChipId();
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println("Chip ID : ");
+ // int a = ESP.getChipId();
+  Serial.println(id);
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
@@ -115,7 +128,7 @@ void setup() {
 
 int ledOn = 0;
 int micVal;
-int ledOnTime = 2000; // How long th
+int ledOnTime = 2000; // How long the led stays HIGH
 int timerLed = 0;
 int micThsCounter = 0;
 
@@ -132,14 +145,14 @@ if(micThsCounter <= 11){
 
   if(ledOn == 0){
     micVal = analogRead(A0);
-    delay(10);
+    delay(5);
     //Serial.println("Ledoff");
 
       if(micVal > threshold){
         ledOn = 1;
         timerLed = now;
         Serial.println("Got Hit!!");
-        client.publish("test", "ESP - 2");
+        client.publish("test", publishID);
       }
   }
   
