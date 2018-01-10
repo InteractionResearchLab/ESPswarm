@@ -1,28 +1,3 @@
-/*
- Basic ESP8266 MQTT example
-
- This sketch demonstrates the capabilities of the pubsub library in combination
- with the ESP8266 board/library.
-
- It connects to an MQTT server then:
-  - publishes "hello world" to the topic "outTopic" every two seconds
-  - subscribes to the topic "inTopic", printing out any messages
-    it receives. NB - it assumes the received payloads are strings not binary
-  - If the first character of the topic "inTopic" is an 1, switch ON the ESP Led,
-    else switch it off
-
- It will reconnect to the server if the connection is lost using a blocking
- reconnect function. See the 'mqtt_reconnect_nonblocking' example for how to
- achieve the same result without blocking the main loop.
-
- To install the ESP8266 board, (using Arduino 1.6.4+):
-  - Add the following 3rd party board manager under "File -> Preferences -> Additional Boards Manager URLs":
-       http://arduino.esp8266.com/stable/package_esp8266com_index.json
-  - Open the "Tools -> Board -> Board Manager" and click install for the ESP8266"
-  - Select your ESP8266 in "Tools -> Board"
-
-*/
-
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 
@@ -30,7 +5,7 @@
 
 const char* ssid = "IAAC-WIFI";
 const char* password = "enteriaac2013";
-const char* mqtt_server = "192.168.5.71";
+const char* mqtt_server = "192.168.5.225";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -103,39 +78,81 @@ void reconnect() {
   }
 }
 
+
+int sampleNumber = 10;
+int total = 0;
+int threshold = 0;
+int addtoBaseReading = 15;
+
+void setMicThreshold(int i){
+      if(i<10){
+        Serial.println("Setting Up Mic Threshold");
+        Serial.print("Itteration number: ");
+        Serial.print(i);
+        Serial.print("   Got reading :");
+        total += analogRead(A0);
+        delay(10);
+        Serial.println(analogRead(A0));
+      }
+      if(i==10){
+        total = total / sampleNumber;
+        Serial.print("Threshold set to: ");
+        threshold = total + addtoBaseReading;  // add a small value to the baseline 
+        Serial.println(threshold);
+        }
+}
+
+
 void setup() {
   pinMode(2, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
   Serial.begin(115200);
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
+ 
 }
 
-int threshold = 60;
+
 int ledOn = 0;
 int micVal;
-int ledOnTime =2000; // How long th
+int ledOnTime = 2000; // How long th
 int timerLed = 0;
+int micThsCounter = 0;
+
 
 void loop() {
 
-  long now = millis();
+if(micThsCounter <= 11){
+   setMicThreshold(micThsCounter);
+   micThsCounter++;
+  }  
   
+
+  long now = millis();
+
+  if(ledOn == 0){
     micVal = analogRead(A0);
     delay(10);
     //Serial.println("Ledoff");
 
-    if(micVal > threshold){
-      ledOn = 1;
-      timerLed = millis();
-      Serial.println("Got Hit!!");
-    }
+      if(micVal > threshold){
+        ledOn = 1;
+        timerLed = now;
+        Serial.println("Got Hit!!");
+        client.publish("test", "ESP - 2");
+      }
+  }
   
 
   if(ledOn == 1){
-    digitalWrite(2,LOW);
-    Serial.println("Lit up led");
-    ledOn = 0;
+    if(millis() < timerLed + ledOnTime){
+      digitalWrite(2,LOW);
+     // Serial.println("Lit up led");
+    }
+    else{
+      ledOn = 0;
+      digitalWrite(2,HIGH);
+    }
   }
 
   
@@ -144,17 +161,6 @@ void loop() {
     reconnect();
   }
   client.loop();
-
-  
-//  if (now - lastMsg > 2000) {
-//    lastMsg = now;
-//   // ++value;
-//    value = 1;
-//    snprintf (msg, 75, "ESP -  #%ld", value);
-//    Serial.print("Publish message: ");
-//    Serial.println(msg);
-//    client.publish("outTopic", msg);
-//  }
 
 
 }
