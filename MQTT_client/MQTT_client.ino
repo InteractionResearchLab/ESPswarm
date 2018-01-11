@@ -16,7 +16,6 @@ const char* ssid = "IAAC-WIFI";
 const char* password = "enteriaac2013";
 const char* mqtt_server = "192.168.5.225";
 
-
 // MESSAGE BROKER CONFIG
 PubSubClient client(wifiClient);
 const char* subscribeTopic = "animation" ;
@@ -105,6 +104,14 @@ void updateLEDs() {
         }
   }
   pixels.show();
+}
+
+void ensureConnection(){
+  // Reconnect
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
 }
 
 void loop() {
@@ -227,96 +234,30 @@ void reconnect() {
   }
 }
 
+// void setMicThreshold(int i){
+//   if(i<10){
+//     Serial.println("Setting Up Mic Threshold");
+//     Serial.print("Itteration number: ");
+//     Serial.print(i);
+//     Serial.print("   Got reading :");
+//     total += analogRead(A0);
+//     delay(1);
+//     Serial.println(analogRead(A0));
+//   }
+//   if(i==10){
+//     total = total / sampleNumber;
+//     Serial.print("Threshold set to: ");
+//     threshold = total + addtoBaseReading;  // add a small value to the baseline 
+//     Serial.println(threshold);
+//     }
+// }
 
-
-int sampleNumber = 10;
-int total = 0;
-int threshold = 0;
-int addtoBaseReading = 15;
-
-void setMicThreshold(int i){
-      if(i<10){
-        Serial.println("Setting Up Mic Threshold");
-        Serial.print("Itteration number: ");
-        Serial.print(i);
-        Serial.print("   Got reading :");
-        total += analogRead(A0);
-        delay(10);
-        Serial.println(analogRead(A0));
-      }
-      if(i==10){
-        total = total / sampleNumber;
-        Serial.print("Threshold set to: ");
-        threshold = total + addtoBaseReading;  // add a small value to the baseline 
-        Serial.println(threshold);
-        }
-}
-
-
-void setup() {
-  pinMode(2, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
-  Serial.begin(115200);
- // char chipId = ESP.getChipId();
-  Serial.println(" ");
-  Serial.println(" ");
-  Serial.println("Chip ID : ");
- // int a = ESP.getChipId();
-  Serial.println(id);
-  setup_wifi();
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
- 
-}
-
-
-int ledOn = 0;
-int micVal;
-int ledOnTime = 2000; // How long the led stays HIGH
-int timerLed = 0;
-int micThsCounter = 0;
-
-
-void loop() {
-
-if(micThsCounter <= 11){
-   setMicThreshold(micThsCounter);
-   micThsCounter++;
-  }  
-  
-
-  long now = millis();
-
-  if(ledOn == 0){
-    micVal = analogRead(A0);
-    delay(5);
-    //Serial.println("Ledoff");
-
-      if(micVal > threshold){
-        ledOn = 1;
-        timerLed = now;
-        Serial.println("Got Hit!!");
-        client.publish("test", publishID);
-      }
-  }
-  
-
-  if(ledOn == 1){
-    if(millis() < timerLed + ledOnTime){
-      digitalWrite(2,LOW);
-     // Serial.println("Lit up led");
-    }
-    else{
-      ledOn = 0;
-      digitalWrite(2,HIGH);
-    }
-  }
-
-  
-
-    if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
-
-
-}
+// 22
+// int sampleNumber = 10;
+// int total = 0;
+// int threshold = 0;
+// int addtoBaseReading = 15;
+// int dimmingDuration = 2000; // How long the led stays HIGH
+// int timeSnapshot = 0;
+// int TresholdAverageSampleSize = 0;
+// 33
