@@ -1,5 +1,8 @@
+// Import express framework
+var express = require('express');
 // Import the MQTT node package library
-var mqtt = require('mqtt');  
+var mqtt = require('mqtt'); 
+ 
 
 // Initialize MQTT connection, force clean flag to be false so connections are reestablished
 var mqttClient = mqtt.connect('mqtt://localhost:1883', {  
@@ -32,6 +35,20 @@ mqttClient.on('message', (topic, message) => {
   console.log(`Received message: '${message}'`);
 });
 
-animateLEDS();
+// animateLEDS();
 
 
+// EXPRESS SERVER CODE
+var app = express();
+
+///app.use('*', express.static(path.join(__dirname, 'public')));
+app.use(express.static('public'))
+
+app.get('/', function (req, res) {
+  console.log('Someone navigated to the home page');
+  res.send('Hello World!');
+});
+
+app.listen(3000, function () {
+  console.log('Example app listening on port 3000!');
+});
