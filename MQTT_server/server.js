@@ -1,9 +1,13 @@
+// Import the MQTT node package library
 var mqtt = require('mqtt');  
+
+// Initialize MQTT connection, force clean flag to be false so connections are reestablished
 var mqttClient = mqtt.connect('mqtt://localhost:1883', {  
     clean: false,
     clientId: 'nodeServer'
 });
 
+// Log connection status after connection is established
 mqttClient.on('connect', (connack) => {  
   if (connack.sessionPresent) {
     console.log('Already subbed, no subbing necessary');
@@ -15,22 +19,19 @@ mqttClient.on('connect', (connack) => {
   }
 });   
 
+// Function to animate the LEDs
 function animateLEDS() {
     setInterval(
-        function(){
-            mqttClient.publish('animation', '0', { qos: 1 });
-            setTimeout(
-                function(){
-                    mqttClient.publish('animation', '1', { qos: 1 });
-                }
-                , 1000
-            );
-        }
+        function() {console.log("test script");}
         , 2000
     );
 }
 
+// Log every message that's received on the broker
 mqttClient.on('message', (topic, message) => {  
   console.log(`Received message: '${message}'`);
 });
+
+animateLEDS();
+
 
