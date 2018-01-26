@@ -3,9 +3,16 @@
 
 // Update these with values suitable for your network.
 
-const char* ssid = "IAAC-WIFI";
-const char* password = "enteriaac2013";
-const char* mqtt_server = "192.168.5.225";
+//const char* ssid = "IAAC-WIFI";
+//const char* password = "enteriaac2013";
+//const char* mqtt_server = "192.168.5.47";
+
+
+const char* ssid = "llum_installation_wifi";
+const char* password = "99334994";
+const char* mqtt_server = "192.168.0.200"; // Raspberry pi has a static ip 192.168.0.200
+
+
 
 /// IMPORTANT change the last digit of the following two lines to give unique identifier
 const char* id = "ESP8266Client-2" ;
