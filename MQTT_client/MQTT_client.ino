@@ -3,7 +3,7 @@
 #include <Adafruit_NeoPixel.h>
 
 // SYSTEM CONFIG
-#define LED_PIN 2
+#define LED_PIN 3
 #define ANALOG_READ_PIN A0
 #define NUMPIXELS 7
 bool DEBUG_MODE = true;
@@ -12,9 +12,11 @@ int delayDuration = 100;
 
 // WIFI CONFIG - Update these with values suitable for your network.
 WiFiClient wifiClient;
-const char* ssid = "IAAC-WIFI";
-const char* password = "enteriaac2013";
-const char* mqtt_server = "192.168.5.225";
+//const char* ssid = "IAAC-WIFI";
+//const char* password = "enteriaac2013";
+const char* ssid = "llum_installation_wifi";
+const char* password = "99334994";
+const char* mqtt_server = "192.168.0.103"; // Raspberry pi has a static ip 192.168.0.103
 
 // MESSAGE BROKER CONFIG
 PubSubClient client(wifiClient);
@@ -36,7 +38,7 @@ int baselineValue;
 int fadeValue;
 
 // LED CONFIG
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 bool ledSwitched = false;
 int ledMaxBrigthness = 200;
 int fadeOutTimeDivider = 6;
@@ -49,7 +51,7 @@ void setup() {
   Serial.begin(115200);
   while(!Serial);
   // Initialize LEDs
-  pixels.begin;
+  pixels.begin();
   pixels.show();
   // Initialize WIFI and MQTT connection
   setup_wifi();
@@ -65,7 +67,7 @@ void setup() {
 
 void readSensorValue() {
   // Read sensor value
-  analogValues = analogRead(ANALOG_READ_PIN);
+  analogValue = analogRead(ANALOG_READ_PIN);
   if(!baselineValue) {
     baselineValue = analogValue;
   } 
@@ -84,7 +86,7 @@ void calculateTreshold() {
 
 void detectColision() {   
   if(abs(analogValue - baselineValue) > (baselineValue / tresholdRatio) && abs(analogValue - baselineValue) > minTreshold && calibrationDuration == 0){
-    int startingLed = i * NUMPIXELS;
+    int startingLed = NUMPIXELS;
     for(int k = startingLed; k < (startingLed + NUMPIXELS); k++){
         fadeValue = ledMaxBrigthness;
     }
@@ -120,7 +122,7 @@ void loop() {
   calculateTreshold();
   detectColision();
   updateLEDs();
-  ensureConnection();
+ // ensureConnection();
 
   // // Calculate treshold
   // if(TresholdAverageSampleSize <= 11){
