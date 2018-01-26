@@ -1,11 +1,18 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <Adafruit_NeoPixel.h>
+#ifdef __AVR__
+#include <avr/power.h>
+#endif
+#include <ESP8266mDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 
 // SYSTEM CONFIG
-#define LED_PIN 3
+#define LED_PIN D3
 #define ANALOG_READ_PIN A0
 #define NUMPIXELS 7
+
 bool DEBUG_MODE = true;
 bool DELAY_MODE = false;
 int delayDuration = 100;
@@ -23,9 +30,12 @@ PubSubClient client(wifiClient);
 const char* subscribeTopic = "animation" ;
 const char* publishTopic = "test";
 
-// ESP CONFIG - IMPORTANT change the last digit of the following two lines to give unique identifier
-const char* chipID = "ESP8266-Client-1" ;
-const char* publishID = "ESP-1";
+/// IMPORTANT change the last digit of the following two lines to give unique identifier
+const char* id = "ESP8266Client-3" ;
+const char* publishID = "ESP - 3";
+char resetID= '3';
+
+
 
 // SENSOR CONFIG
 float persistenceMultiplier = 0.75;
@@ -35,13 +45,14 @@ int calibrationDuration = 150;
 int analogSensorReading;
 int analogValue;
 int baselineValue;
-int fadeValue;
+float fadeValue;
+
 
 // LED CONFIG
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 bool ledSwitched = false;
 int ledMaxBrigthness = 200;
-int fadeOutTimeDivider = 6;
+float fadeOutTimeDivider = 0.05;
 
 
 void setup() {
@@ -49,21 +60,75 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);     
   // Initialize serial
   Serial.begin(115200);
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.print("ID : ");
+  Serial.println(id);
+  Serial.print("Mac Address : ");
+  Serial.println(WiFi.macAddress());
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+    Serial.println("Connection Failed! Rebooting...");
+    delay(5000);
+    ESP.restart();
+  }
+
+  // Port defaults to 8266
+  // ArduinoOTA.setPort(8266);
+
+  // Hostname defaults to esp8266-[ChipID]
+  // ArduinoOTA.setHostname("myesp8266");
+
+  // No authentication by default
+  //ArduinoOTA.setPassword((const char *)"123");
+
+  ArduinoOTA.onStart([]() {
+    Serial.println("Start");
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nEnd");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+    else if (error == OTA_END_ERROR) Serial.println("End Failed");
+  });
+  ArduinoOTA.begin();
+  Serial.println("Ready");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  
   while(!Serial);
   // Initialize LEDs
   pixels.begin();
   pixels.show();
-  // Initialize WIFI and MQTT connection
-  setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
 
   if(DEBUG_MODE){
     Serial.println(" ");
     Serial.print("ChipID: ");
-    Serial.println(chipID);
+    Serial.println(id);
   }
 }
+
+
+
+
+
+
+
+
+
+
 
 void readSensorValue() {
   // Read sensor value
@@ -107,7 +172,7 @@ void detectColision() {
 
 void updateLEDs() {
   for(int i=0; i < NUMPIXELS; i++){
-        pixels.setPixelColor(i, fadeValue, fadeValue, fadeValue);     
+        pixels.setPixelColor(i, (int)fadeValue, (int)fadeValue, (int)fadeValue);     
         
         fadeValue -= fadeOutTimeDivider;
         if(fadeValue < 0) {
@@ -125,7 +190,40 @@ void ensureConnection(){
   client.loop();
 }
 
+
+
+
+
+bool ota_flag = true;
+int time_elapsed = 0;
+int ledOn = 0;
+int micVal;
+int ledOnTime = 1500; // How long the led stays HIGH
+int timerLed = 0;
+int micThsCounter = 0;
+int brightness = 0;
+
+
+
+
+
+
 void loop() {
+  if (ota_flag) {
+      pixelsOn(150);
+      delay(1000);
+      pixelsOff();
+      delay(100);
+      pixelsOn(150);
+      delay(1000);
+      pixelsOff();
+      while (time_elapsed < 15000) {
+        ArduinoOTA.handle();
+        time_elapsed = millis();
+        delay(10);
+      }
+      ota_flag = false;
+    }
 
   readSensorValue();
   calculateTreshold();
@@ -202,39 +300,53 @@ void setup_wifi() {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
   
-  if(DEBUG_MODE){
-    Serial.print("Message arrived [");
-    Serial.print(topic);
-    Serial.print("] ");
+  if (strcmp(topic,"animation")==0){
+  
     for (int i = 0; i < length; i++) {
       Serial.print((char)payload[i]);
     }
     Serial.println();
-  }
+      // Switch on the LED if an 1 was received as first character
+      if ((char)payload[0] == '0') {
+        //digitalWrite(ledPin, LOW);   // Turn the LED on (Note that LOW is the voltage level
+        pixelsOff();
+        // but actually the LED is on; this is because
+        // it is acive low on the ESP-01)
+      } else if((char)payload[0] == '1'){
+        // digitalWrite(ledPin, HIGH);  // Turn the LED off by making the voltage HIGH
+          pixelsOn(ledMaxBrigthness);
+      }
+   } 
 
-  // Switch on the LED if 1 was received as first character
-  if ((char)payload[0] == '1') {
-    digitalWrite(LED_PIN, LOW);   // Turn the LED on (Note that LOW is the voltage level
-    // but actually the LED is on; this is because
-    // it is active low on the ESP-01)
-  } else {
-    digitalWrite(LED_PIN, HIGH);  // Turn the LED off by making the voltage HIGH
-  }
-
+   if (strcmp(topic,"reset")==0){
+      for (int i = 0; i < length; i++) {
+        Serial.print((char)payload[i]);
+      }
+      Serial.println();
+         if(char(payload[0]) == resetID){  /// HARD CODE HERE THE ESP IDENTIFIER
+        // digitalWrite(ledPin, HIGH);  // Turn the LED off by making the voltage HIGH
+        ESP.restart();
+      }
+   }   
 }
+
 
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect(chipID)) { // IMPORTANT connect each ESP with a unique identifier
+    if (client.connect(id)) { // IMPORTANT connect each ESP with a unique identifier
       Serial.println("connected");
       // Once connected, publish an announcement...
-     // client.publish("test", "hello world");
+      // client.publish("test", "hello world");
       // ... and resubscribe
       client.subscribe("animation");
+      client.subscribe("reset");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -242,6 +354,31 @@ void reconnect() {
       // Wait 5 seconds before retrying
       delay(5000);
     }
+  }
+}
+
+void pixelsOn(int brightness) {
+  for (int i = 0; i < NUMPIXELS; i++) {
+
+    // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
+    pixels.setPixelColor(i, pixels.Color(brightness, brightness, brightness)); // Moderately bright green color.
+
+    pixels.show(); // This sends the updated pixel color to the hardware.
+    // delay(delayval); // Delay for a period of time (in milliseconds).
+
+  }
+}
+
+
+void pixelsOff() {
+  for (int i = 0; i < NUMPIXELS; i++) {
+
+    // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
+    pixels.setPixelColor(i, pixels.Color(0, 0, 0)); // Moderately bright green color.
+
+    pixels.show(); // This sends the updated pixel color to the hardware.
+    // delay(delayval); // Delay for a period of time (in milliseconds).
+
   }
 }
 
