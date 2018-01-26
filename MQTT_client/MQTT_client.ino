@@ -80,6 +80,15 @@ void readSensorValue() {
 
 void calculateTreshold() {
   baselineValue = baselineValue * persistenceMultiplier + (1-persistenceMultiplier) * analogValue;  
+  if(DEBUG_MODE){
+    Serial.print(" ( ");
+    Serial.print(analogValue);
+    Serial.print(" / ");
+    Serial.print(baselineValue);
+    Serial.print(" / ");
+    Serial.print(fadeValue);
+    Serial.println(" ) ");
+  }
 }
 
 void detectColision() {   
