@@ -30,17 +30,17 @@ PubSubClient client(wifiClient);
 const char* subscribeTopic = "animation" ;
 const char* publishTopic = "test";
 
-/// IMPORTANT change the last digit of the following two lines to give unique identifier
-const char* id = "ESP8266Client-3" ;
-const char* publishID = "ESP - 3";
-char resetID= '3';
+/// IMPORTANT change the last digit of the following three lines to give unique identifier
+const char* id = "ESP8266Client-2" ;
+const char* publishID = "ESP - 2";
+char resetID= '2';
 
 
 
 // SENSOR CONFIG
 float persistenceMultiplier = 0.75;
-int tresholdRatio = 3;
-int minTreshold = 20;
+int tresholdRatio = 7;
+int minTreshold = 7;
 int calibrationDuration = 150;
 int analogSensorReading;
 int analogValue;

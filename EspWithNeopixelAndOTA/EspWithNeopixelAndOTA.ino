@@ -30,9 +30,9 @@ const char* mqtt_server = "192.168.0.103"; // Raspberry pi has a static ip 192.1
 
 
 /// IMPORTANT change the last digit of the following two lines to give unique identifier
-const char* id = "ESP8266Client-3" ;
-const char* publishID = "ESP - 3";
-char resetID= '3';
+const char* id = "ESP8266Client-1" ;
+const char* publishID = "ESP - 1";
+char resetID= '1';
 
 
 
@@ -181,7 +181,7 @@ void reconnect() {
 int sampleNumber = 10;
 int total = 0;
 int threshold = 0;
-int addtoBaseReading = 8;
+int addtoBaseReading = 10;
 
 void setMicThreshold(int i) {
   if (i < 10) {
