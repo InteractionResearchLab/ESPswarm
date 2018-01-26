@@ -23,7 +23,7 @@ WiFiClient wifiClient;
 //const char* password = "enteriaac2013";
 const char* ssid = "llum_installation_wifi";
 const char* password = "99334994";
-const char* mqtt_server = "192.168.0.103"; // Raspberry pi has a static ip 192.168.0.103
+const char* mqtt_server = "192.168.1.150"; // Raspberry pi has a static ip 192.168.0.103
 
 // MESSAGE BROKER CONFIG
 PubSubClient client(wifiClient);
@@ -106,7 +106,7 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   
-  while(!Serial);
+ // while(!Serial);
   // Initialize LEDs
   pixels.begin();
   pixels.show();
@@ -164,6 +164,7 @@ void detectColision() {
     for(int k = startingLed; k < (startingLed + NUMPIXELS); k++){
         fadeValue = ledMaxBrigthness;
     }
+    client.publish("test", publishID);
   }  
   if(calibrationDuration > 0){
     calibrationDuration--;
@@ -229,45 +230,9 @@ void loop() {
   calculateTreshold();
   detectColision();
   updateLEDs();
- // ensureConnection();
+  ensureConnection();
 
-  // // Calculate treshold
-  // if(TresholdAverageSampleSize <= 11){
-  //  setMicThreshold(TresholdAverageSampleSize);
-  //  TresholdAverageSampleSize++;
-  // }  
-
-  // // Take snapshot
-  // long now = millis();
-
-  // // Read sensor
-  // if(!ledSwitched){
-  //   micVal = analogRead(A0);
-  //   delay(1);
-
-    
-  //   if(micVal > threshold){
-  //     ledSwitched = true;
-  //     timeSnapshot = now;
-  //     Serial.println("Hit Registered");
-  //     client.publish("test", publishID);
-  //   }
-  // }
-  
-  // // Dim and turn off
-  // if(ledSwitched){
-  //   if(millis() < timeSnapshot + dimmingDuration){
-  //     digitalWrite(2,LOW);
-  //   }
-  //   else{
-  //     ledSwitched = false;
-  //     digitalWrite(2,HIGH);
-  //   }
-  // }
-
-  // // Check connection status and reconnect if necessary
-  // ensureConnection()
-
+ 
 }
 
 void setup_wifi() {
@@ -318,7 +283,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
         // it is acive low on the ESP-01)
       } else if((char)payload[0] == '1'){
         // digitalWrite(ledPin, HIGH);  // Turn the LED off by making the voltage HIGH
-          pixelsOn(ledMaxBrigthness);
+          pixelsOn(200);
       }
    } 
 
@@ -382,29 +347,3 @@ void pixelsOff() {
   }
 }
 
-// void setMicThreshold(int i){
-//   if(i<10){
-//     Serial.println("Setting Up Mic Threshold");
-//     Serial.print("Itteration number: ");
-//     Serial.print(i);
-//     Serial.print("   Got reading :");
-//     total += analogRead(A0);
-//     delay(1);
-//     Serial.println(analogRead(A0));
-//   }
-//   if(i==10){
-//     total = total / sampleNumber;
-//     Serial.print("Threshold set to: ");
-//     threshold = total + addtoBaseReading;  // add a small value to the baseline 
-//     Serial.println(threshold);
-//     }
-// }
-
-// 22
-// int sampleNumber = 10;
-// int total = 0;
-// int threshold = 0;
-// int addtoBaseReading = 15;
-// int dimmingDuration = 2000; // How long the led stays HIGH
-// int timeSnapshot = 0;
-// int TresholdAverageSampleSize = 0;
