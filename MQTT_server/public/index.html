@@ -1,0 +1,186 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8">
+
+  <title>LLUM admin console</title>
+  <meta name="description" content="LLUM admin console">
+  <meta name="author" content="MAI">
+
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- IE -->
+  <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+  <!-- other browsers -->
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+
+  <!--[if lt IE 9]>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.js"></script>
+  <![endif]-->
+
+
+
+</head>
+
+<body>
+  <script src="js/scripts.js"></script>
+  <script src="js/socket.io.js"></script>
+  <script>
+    var socket = io();
+    socket.on("confirmedConnection", function(){
+      console.log("securely connected to the server");
+    });
+  </script>
+
+  <div class="SystemInformation">
+    <div class="SystemTitle">Playball LLUM</div>
+    <div class="SystemTimestamp">Friday, 17/01/2018</div>
+  </div>
+
+  <div class="SystemStatus">
+    <div class="ConnectedClients">
+        <div class="AgentClient">
+          <div class="AgentID">A#01</div>
+          <div class="AgentStatus">list</div>
+          <div class="AgentIP">@3.162</div>
+        </div>
+
+        <div class="AgentClient">
+          <div class="AgentID">A#02</div>
+          <div class="AgentStatus">list</div>
+          <div class="AgentIP">@3.163</div>
+        </div>
+
+        <div class="AgentClient">
+          <div class="AgentID">Node</div>
+          <div class="AgentStatus">list</div>
+          <div class="AgentIP">@0.103</div>
+        </div>
+      
+        <div class="AgentClient">
+          <div class="AgentID">E#01</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.5</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#02</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.6</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#03</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.7</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#04</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.8</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#01</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.5</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#02</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.6</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#03</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.7</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#04</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.8</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#01</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.5</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#02</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.6</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#03</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.7</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#04</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.8</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#01</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.5</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#02</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.6</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#03</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.7</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#04</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.8</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#01</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.5</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#02</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.6</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#03</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.7</div>
+        </div>
+        <div class="AgentClient">
+          <div class="AgentID">E#04</div>
+          <div class="AgentStatus">on</div>
+          <div class="AgentIP">@1.8</div>
+        </div>
+
+    </div>
+    
+    <div class="SystemLog">
+  
+    </div>
+  </div>
+
+  <div class="InputConsole">
+    <input class="CommandInput" type="text" name="commandInput">
+    <input class="SendButton" type="submit" value="send">
+  </div>
+  
+
+
+
+</body>
+
+</html>
+
+
+
+
+
