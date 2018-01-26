@@ -26,6 +26,15 @@ io.on('connection', function(socket){
   socket.on('disconnect', function(){
     console.log('agent disconnected');
   });
+
+  // SIMULATION EVENTS
+  socket.on('simulation-animation-hit', function(data){
+    console.log("received data from socket");
+    console.log(data);
+    mqttClient.publish('animation', data.agent, { qos: 1 });
+  });
+
+
 });
 
 
