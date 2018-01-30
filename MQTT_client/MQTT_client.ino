@@ -8,17 +8,26 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 
+const char* assigned_id = "03";
+
 /// IMPORTANT change the last digit of the following three lines to give unique identifier
-const char* id = "ESP01";
-const char* resetID = "01";
+const char* id = "ESP03";
+const char* resetID = assigned_id;
 
 // SYSTEM CONFIG
 #define LED_PIN D3
 #define ANALOG_READ_PIN A0
 #define NUMPIXELS 7
 
+// RESET PINS
+#define GPIO0 D3
+#define GPIO15 D8
+
+
+
 bool DEBUG_MODE = true;
-bool DELAY_MODE = false;
+bool DELAY_MODE = true;
+bool SENSOR_VALUE_CONSOLE_MONITOR= false;
 int delayDuration = 100;
 
 // WIFI CONFIG - Update these with values suitable for your network.
@@ -33,7 +42,6 @@ const char* mqtt_server = "192.168.5.80"; // Raspberry pi has a static ip 192.16
 PubSubClient client(wifiClient);
 const char* subscribeTopic = "animation" ;
 const char* publishTopic = "test";
-
 
 
 // SENSOR CONFIG
@@ -54,25 +62,109 @@ int ledMaxBrigthness = 200;
 float fadeOutTimeDivider = 0.05;
 
 
+// OTA CONFIG
+bool ota_flag = true;
+int time_elapsed = 0;
+
+
 void setup() {
+  
   // Initialize the LED pin as an output
-  pinMode(LED_PIN, OUTPUT);     
+  pinMode(LED_PIN, OUTPUT);    
+   
   // Initialize serial
-  Serial.begin(115200);
-  Serial.println(" ");
-  Serial.println(" ");
-  Serial.print("ID : ");
-  Serial.println(id);
-  Serial.print("Mac Address : ");
-  Serial.println(WiFi.macAddress());
+  // while(!Serial);
+  if(DEBUG_MODE){
+    Serial.begin(115200);
+    Serial.println(" ");
+    Serial.println(" ");
+    Serial.print("ID : ");
+    Serial.println(id);
+    Serial.print("Mac Address : ");
+    Serial.println(WiFi.macAddress());
+  }
+  
+  setup_wifi();
+  setup_OTA();
+
+  // Initialize LEDs
+  pixels.begin();
+  pixels.show();
+
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+
+  if(DEBUG_MODE){
+    Serial.println(" ");
+    Serial.print("ChipID: ");
+    Serial.println(id);
+  }
+}
+
+void loop() {
+
+  checkOTAflag();
+
+  readSensorValue();
+  calculateTreshold();
+  detectCollision();
+  updateLEDs();
+  ensureConnection();
+}
+
+
+void checkOTAflag() {
+  if (ota_flag) {
+    pixelsOn(150);
+    delay(1000);
+    pixelsOff();
+    delay(100);
+    pixelsOn(150);
+    delay(1000);
+    pixelsOff();
+    while (time_elapsed < 15000) {
+      ArduinoOTA.handle();
+      time_elapsed = millis();
+      delay(10);
+    }
+    pixelsOn(150);
+    delay(2000);
+    pixelsOff();
+    ota_flag = false;
+  }
+}
+
+
+void setup_wifi() {
+
+  if(DELAY_MODE){
+    delay(10);
+  }
+
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {
     Serial.println("Connection Failed! Rebooting...");
-    delay(5000);
+    delay(3000);
     ESP.restart();
   }
 
+  Serial.println("Ready");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+ 
+//  WiFi.begin(ssid, password);
+//
+//  while (WiFi.status() != WL_CONNECTED) {
+//    delay(500);
+//    if(DEBUG_MODE){
+//      Serial.print(".");
+//    }
+//  }
+
+}
+
+void setup_OTA(){
   // Port defaults to 8266
   // ArduinoOTA.setPort(8266);
 
@@ -100,33 +192,7 @@ void setup() {
     else if (error == OTA_END_ERROR) Serial.println("End Failed");
   });
   ArduinoOTA.begin();
-  Serial.println("Ready");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-
-  
- // while(!Serial);
-  // Initialize LEDs
-  pixels.begin();
-  pixels.show();
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
-
-  if(DEBUG_MODE){
-    Serial.println(" ");
-    Serial.print("ChipID: ");
-    Serial.println(id);
-  }
 }
-
-
-
-
-
-
-
-
-
 
 
 void readSensorValue() {
@@ -146,28 +212,32 @@ void readSensorValue() {
 
 void calculateTreshold() {
   baselineValue = baselineValue * persistenceMultiplier + (1-persistenceMultiplier) * analogValue;  
-  if(DEBUG_MODE){
-//    Serial.print(" ( ");
-//    Serial.print(analogValue);
-//    Serial.print(" / ");
-//    Serial.print(baselineValue);
-//    Serial.print(" / ");
-//    Serial.print(fadeValue);
-//    Serial.println(" ) ");
+  if(SENSOR_VALUE_CONSOLE_MONITOR){
+    Serial.print(" ( ");
+    Serial.print(analogValue);
+    Serial.print(" / ");
+    Serial.print(baselineValue);
+    Serial.print(" / ");
+    Serial.print(fadeValue);
+    Serial.println(" ) ");
   }
 }
 
-void detectColision() {   
+void detectCollision() {   
   if(abs(analogValue - baselineValue) > (baselineValue / tresholdRatio) && abs(analogValue - baselineValue) > minTreshold && calibrationDuration == 0){
     int startingLed = NUMPIXELS;
     for(int k = startingLed; k < (startingLed + NUMPIXELS); k++){
         fadeValue = ledMaxBrigthness;
     }
-    //client.publish("test", id);
+    //emitCollisionSignals();
   }  
   if(calibrationDuration > 0){
     calibrationDuration--;
   }  
+}
+
+void emitCollisionSignals() {
+  client.publish("test", id);
 }
 
 void updateLEDs() {
@@ -190,123 +260,48 @@ void ensureConnection(){
   client.loop();
 }
 
-
-
-
-
-bool ota_flag = true;
-int time_elapsed = 0;
-int ledOn = 0;
-int micVal;
-int ledOnTime = 1500; // How long the led stays HIGH
-int timerLed = 0;
-int micThsCounter = 0;
-int brightness = 0;
-
-
-
-
-
-
-void loop() {
-  if (ota_flag) {
-      pixelsOn(150);
-      delay(1000);
-      pixelsOff();
-      delay(100);
-      pixelsOn(150);
-      delay(1000);
-      pixelsOff();
-      while (time_elapsed < 15000) {
-        ArduinoOTA.handle();
-        time_elapsed = millis();
-        delay(10);
-      }
-      pixelsOn(150);
-      delay(2000);
-      pixelsOff();
-      ota_flag = false;
-    }
-
-  readSensorValue();
-  calculateTreshold();
-  detectColision();
-  updateLEDs();
-  ensureConnection();
-
- 
-}
-
-void setup_wifi() {
-  if(DELAY_MODE){
-    delay(1);
-  }
-
-  // We start by connecting to a WiFi network
-  if(DEBUG_MODE){
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
-  }
-  
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    if(DEBUG_MODE){
-      Serial.print(".");
-    }
-  }
-
-  if(DEBUG_MODE){
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-  }  
-}
-
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
   
   if (strcmp(topic,"animation")==0){
-  
     for (int i = 0; i < length; i++) {
       Serial.print((char)payload[i]);
     }
     Serial.println();
-      // Switch on the LED if an 1 was received as first character
-      if ((char)payload[0] == '0') {
-        //digitalWrite(ledPin, LOW);   // Turn the LED on (Note that LOW is the voltage level
-        pixelsOff();
-        // but actually the LED is on; this is because
-        // it is acive low on the ESP-01)
-      } else if((char)payload[0] == '1'){
-        // digitalWrite(ledPin, HIGH);  // Turn the LED off by making the voltage HIGH
-          pixelsOn(200);
-      }
-   } 
+    if ((char)payload[0] == '0') {  
+      fadeValue = 0;
+    } else if((char)payload[0] == '1'){
+      fadeValue = ledMaxBrigthness;
+    }
+  } 
 
-   if (strcmp(topic,"reset")==0){
-      for (int i = 0; i < length; i++) {
-        Serial.print((char)payload[i]);
+  if (strcmp(topic,"reset")==0){
+    for (int i = 0; i < length; i++) {
+      Serial.print((char)payload[i]);
+    }
+    char resetNumber[3];
+    resetNumber[0] = payload[0];
+    resetNumber[1] = payload[1];
+    String one = resetNumber;
+    
+    Serial.println("");
+    Serial.println(one);
+    
+    if(one == resetID){  /// HARD CODE HERE THE ESP IDENTIFIER
+      Serial.println("Resetting");
+      digitalWrite(GPIO0, HIGH);
+      digitalWrite(GPIO15, LOW);
+
+      WiFi.forceSleepBegin(); 
+      wdt_reset(); 
+      ESP.restart(); 
+      while(1){
+        wdt_reset();
       }
-      //Serial.println("");
-      //Serial.println(char(payload[0]));
-      //Serial.println(char(payload[1]));
-      char resetNumber[1];
-      resetNumber[0] = payload[0];
-      resetNumber[1] = payload[1];
-      String one = resetNumber;
-      Serial.println(one);
-         if(one == "15"){  /// HARD CODE HERE THE ESP IDENTIFIER
-            Serial.println("Resetting");
-            // digitalWrite(ledPin, HIGH);  // Turn the LED off by making the voltage HIGH
-            ESP.restart();
-      }
-   }   
+    }
+  }   
 }
 
 
@@ -356,4 +351,5 @@ void pixelsOff() {
 
   }
 }
+
 
