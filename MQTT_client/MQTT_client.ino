@@ -8,6 +8,11 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 
+/// IMPORTANT change the last digit of the following three lines to give unique identifier
+const char* id = "ESP8266Client - 02";
+const char* publishID = "ESP - 02";
+const char* resetID = "15";
+
 // SYSTEM CONFIG
 #define LED_PIN D3
 #define ANALOG_READ_PIN A0
@@ -29,11 +34,6 @@ const char* mqtt_server = "192.168.1.150"; // Raspberry pi has a static ip 192.1
 PubSubClient client(wifiClient);
 const char* subscribeTopic = "animation" ;
 const char* publishTopic = "test";
-
-/// IMPORTANT change the last digit of the following three lines to give unique identifier
-const char* id = "ESP8266Client-2" ;
-const char* publishID = "ESP - 2";
-char resetID= '2';
 
 
 
@@ -148,13 +148,13 @@ void readSensorValue() {
 void calculateTreshold() {
   baselineValue = baselineValue * persistenceMultiplier + (1-persistenceMultiplier) * analogValue;  
   if(DEBUG_MODE){
-    Serial.print(" ( ");
-    Serial.print(analogValue);
-    Serial.print(" / ");
-    Serial.print(baselineValue);
-    Serial.print(" / ");
-    Serial.print(fadeValue);
-    Serial.println(" ) ");
+//    Serial.print(" ( ");
+//    Serial.print(analogValue);
+//    Serial.print(" / ");
+//    Serial.print(baselineValue);
+//    Serial.print(" / ");
+//    Serial.print(fadeValue);
+//    Serial.println(" ) ");
   }
 }
 
@@ -164,7 +164,7 @@ void detectColision() {
     for(int k = startingLed; k < (startingLed + NUMPIXELS); k++){
         fadeValue = ledMaxBrigthness;
     }
-    client.publish("test", publishID);
+    //client.publish("test", publishID);
   }  
   if(calibrationDuration > 0){
     calibrationDuration--;
@@ -223,6 +223,9 @@ void loop() {
         time_elapsed = millis();
         delay(10);
       }
+      pixelsOn(150);
+      delay(2000);
+      pixelsOff();
       ota_flag = false;
     }
 
@@ -291,10 +294,18 @@ void callback(char* topic, byte* payload, unsigned int length) {
       for (int i = 0; i < length; i++) {
         Serial.print((char)payload[i]);
       }
-      Serial.println();
-         if(char(payload[0]) == resetID){  /// HARD CODE HERE THE ESP IDENTIFIER
-        // digitalWrite(ledPin, HIGH);  // Turn the LED off by making the voltage HIGH
-        ESP.restart();
+      //Serial.println("");
+      //Serial.println(char(payload[0]));
+      //Serial.println(char(payload[1]));
+      char resetNumber[1];
+      resetNumber[0] = payload[0];
+      resetNumber[1] = payload[1];
+      String one = resetNumber;
+      Serial.println(one);
+         if(one == "15"){  /// HARD CODE HERE THE ESP IDENTIFIER
+            Serial.println("Resetting");
+            // digitalWrite(ledPin, HIGH);  // Turn the LED off by making the voltage HIGH
+            ESP.restart();
       }
    }   
 }
