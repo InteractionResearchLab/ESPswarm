@@ -9,8 +9,7 @@
 #include <ArduinoOTA.h>
 
 /// IMPORTANT change the last digit of the following three lines to give unique identifier
-const char* id = "ESPClient01";
-const char* publishID = "ESP01";
+const char* id = "ESP01";
 const char* resetID = "01";
 
 // SYSTEM CONFIG
@@ -164,7 +163,7 @@ void detectColision() {
     for(int k = startingLed; k < (startingLed + NUMPIXELS); k++){
         fadeValue = ledMaxBrigthness;
     }
-    //client.publish("test", publishID);
+    //client.publish("test", id);
   }  
   if(calibrationDuration > 0){
     calibrationDuration--;
