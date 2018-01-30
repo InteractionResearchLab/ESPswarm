@@ -19,20 +19,22 @@ int ledMaxBrightness = 150;
 
 // Update these with values suitable for your network.
 //
-const char* ssid = "llum_installation_wifi";
-const char* password = "99334994";
-const char* mqtt_server = "192.168.1.150"; // Raspberry pi has a static ip 192.168.0.103
+//const char* ssid = "llum_installation_wifi";
+//const char* password = "99334994";
+//const char* mqtt_server = "192.168.1.150"; // Raspberry pi has a static ip 192.168.0.103
 
-//const char* ssid = "IAAC-WIFI";
-//const char* password = "enteriaac2013";
+const char* ssid = "IAAC-WIFI";
+const char* password = "enteriaac2013";
+const char* mqtt_server = "192.168.5.80";
+
 ////const char* ssid = "la_derivada";
 ////const char* password = "4l4d3r1v4";
 
 
 /// IMPORTANT change the last digit of the following two lines to give unique identifier
-const char* id = "ESP8266Client-2" ;
-const char* publishID = "ESP - 2";
-char resetID= '2';
+const char* id = "ESPClient1" ;
+const char* publishID = "ESP1";
+char resetID= '01';
 
 
 
@@ -163,10 +165,9 @@ void reconnect() {
     if (client.connect(id)) { // IMPORTANT connect each ESP with a unique identifier
       Serial.println("connected");
       // Once connected, publish an announcement...
-      // client.publish("test", "hello world");
+     // client.publish("test", "hello world");
       // ... and resubscribe
       client.subscribe("animation");
-      client.subscribe("reset");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -333,9 +334,9 @@ void loop() {
     }
   }
 
-//  if (!client.connected()) {
-//    reconnect();
-//  }
+  if (!client.connected()) {
+    reconnect();
+  }
   client.loop();
   
 }

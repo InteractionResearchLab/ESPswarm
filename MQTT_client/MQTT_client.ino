@@ -9,9 +9,9 @@
 #include <ArduinoOTA.h>
 
 /// IMPORTANT change the last digit of the following three lines to give unique identifier
-const char* id = "ESP8266Client - 02";
-const char* publishID = "ESP - 02";
-const char* resetID = "15";
+const char* id = "ESPClient01";
+const char* publishID = "ESP01";
+const char* resetID = "01";
 
 // SYSTEM CONFIG
 #define LED_PIN D3
