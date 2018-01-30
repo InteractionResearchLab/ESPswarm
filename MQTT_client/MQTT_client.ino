@@ -24,11 +24,11 @@ int delayDuration = 100;
 
 // WIFI CONFIG - Update these with values suitable for your network.
 WiFiClient wifiClient;
-//const char* ssid = "IAAC-WIFI";
-//const char* password = "enteriaac2013";
-const char* ssid = "llum_installation_wifi";
-const char* password = "99334994";
-const char* mqtt_server = "192.168.1.150"; // Raspberry pi has a static ip 192.168.0.103
+const char* ssid = "IAAC-WIFI";
+const char* password = "enteriaac2013";
+//const char* ssid = "llum_installation_wifi";
+//const char* password = "99334994";
+const char* mqtt_server = "192.168.5.80"; // Raspberry pi has a static ip 192.168.0.103
 
 // MESSAGE BROKER CONFIG
 PubSubClient client(wifiClient);
