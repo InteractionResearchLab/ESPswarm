@@ -8,10 +8,10 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 
-const char* assigned_id = "01";
+const char* assigned_id = "02";
 
 /// IMPORTANT change the last digit of the following three lines to give unique identifier
-const char* id = "ESP01";
+const char* id = "ESP02";
 const char* resetID = assigned_id;
 
 // SYSTEM CONFIG
@@ -27,8 +27,8 @@ const char* resetID = assigned_id;
 
 bool DEBUG_MODE = true;
 bool DELAY_MODE = true;
-bool SENSOR_VALUE_CONSOLE_MONITOR= false;
-int delayDuration = 100;
+bool SENSOR_VALUE_CONSOLE_MONITOR = true;
+int delayDuration = 20;
 
 // WIFI CONFIG - Update these with values suitable for your network.
 WiFiClient wifiClient;
@@ -59,7 +59,7 @@ float fadeValue;
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 bool ledSwitched = false;
 int ledMaxBrigthness = 200;
-float fadeOutTimeDivider = 1;
+float fadeOutTimeDivider = 0.5;
 
 
 // OTA CONFIG
@@ -116,19 +116,19 @@ void loop() {
 void checkOTAflag() {
   if (ota_flag) {
     pixelsOn(150);
-    delay(1000);
+    delay(200);
     pixelsOff();
-    delay(100);
+    delay(50);
     pixelsOn(150);
-    delay(1000);
+    delay(200);
     pixelsOff();
     while (time_elapsed < 15000) {
       ArduinoOTA.handle();
       time_elapsed = millis();
-      delay(10);
+      delay(2);
     }
     pixelsOn(150);
-    delay(2000);
+    delay(200);
     pixelsOff();
     ota_flag = false;
   }
@@ -145,7 +145,7 @@ void setup_wifi() {
   WiFi.begin(ssid, password);
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {
     Serial.println("Connection Failed! Rebooting...");
-    delay(3000);
+    delay(2000);
     ESP.restart();
   }
 
@@ -320,9 +320,9 @@ void reconnect() {
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
+      Serial.println(" try again in 3 seconds");
+      // Wait 3 seconds before retrying
+      delay(3000);
     }
   }
 }
@@ -331,7 +331,7 @@ void pixelsOn(int brightness) {
   for (int i = 0; i < NUMPIXELS; i++) {
 
     // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-    pixels.setPixelColor(i, pixels.Color(brightness, brightness, brightness)); // Moderately bright green color.
+    pixels.setPixelColor(i, pixels.Color(brightness, 0, 0)); // Moderately bright green color.
 
     pixels.show(); // This sends the updated pixel color to the hardware.
     // delay(delayval); // Delay for a period of time (in milliseconds).
