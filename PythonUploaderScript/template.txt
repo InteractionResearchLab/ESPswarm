@@ -1,0 +1,5 @@
+echo Multiple ESP8266 uploader via WIFI 
+echo Uploading to ESP-1
+mosquitto_pub -t "reset" -m "01"
+sleep 8
+python espota.py -i 192.168.1.151 -p8266 --auth= -f ~/Desktop/WirelessUploadToAllEsp/OutputFiles/Output01.ino
