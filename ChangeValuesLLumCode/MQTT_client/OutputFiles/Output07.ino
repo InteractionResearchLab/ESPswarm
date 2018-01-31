@@ -8,10 +8,10 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 
-const char* assigned_id = "03";
+const char* assigned_id = "07";
 
 /// IMPORTANT change the last digit of the following three lines to give unique identifier
-const char* id = "ESP03";
+const char* id = "ESP07";
 const char* resetID = assigned_id;
 
 // SYSTEM CONFIG
@@ -32,11 +32,11 @@ int delayDuration = 100;
 
 // WIFI CONFIG - Update these with values suitable for your network.
 WiFiClient wifiClient;
-const char* ssid = "IAAC-WIFI";
-const char* password = "enteriaac2013";
-//const char* ssid = "llum_installation_wifi";
-//const char* password = "99334994";
-const char* mqtt_server = "192.168.5.80"; // Raspberry pi has a static ip 192.168.0.103
+//const char* ssid = "IAAC-WIFI";
+//const char* password = "enteriaac2013";
+const char* ssid = "llum_installation_wifi";
+const char* password = "99334994";
+const char* mqtt_server = "192.168.1.150"; // Raspberry pi has a static ip 192.168.1.150
 
 // MESSAGE BROKER CONFIG
 PubSubClient client(wifiClient);
@@ -59,7 +59,7 @@ float fadeValue;
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 bool ledSwitched = false;
 int ledMaxBrigthness = 200;
-float fadeOutTimeDivider = 0.05;
+float fadeOutTimeDivider = 1;
 
 
 // OTA CONFIG
