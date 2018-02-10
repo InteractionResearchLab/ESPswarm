@@ -8,10 +8,9 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 
-const char* assigned_id = "02";
-
 /// IMPORTANT change the last digit of the following three lines to give unique identifier
-const char* id = "ESP02";
+const char* assigned_id = "03";
+const char* id = "ESP03";
 const char* resetID = assigned_id;
 
 // SYSTEM CONFIG
@@ -23,12 +22,10 @@ const char* resetID = assigned_id;
 #define GPIO0 D3
 #define GPIO15 D8
 
-
-
 bool DEBUG_MODE = true;
 bool DELAY_MODE = true;
 bool SENSOR_VALUE_CONSOLE_MONITOR = true;
-int delayDuration = 20;
+int delayDuration = 1;
 
 // WIFI CONFIG - Update these with values suitable for your network.
 WiFiClient wifiClient;
@@ -41,51 +38,50 @@ const char* mqtt_server = "192.168.1.150"; // Raspberry pi has a static ip 192.1
 // MESSAGE BROKER CONFIG
 PubSubClient client(wifiClient);
 const char* subscribeTopic = "animation" ;
-const char* publishTopic = "test";
-
-
-// SENSOR CONFIG
-float persistenceMultiplier = 0.75;
-int tresholdRatio = 7;
-int minTreshold = 7;
-int calibrationDuration = 150;
-int analogSensorReading;
-int analogValue;
-int baselineValue;
-float fadeValue;
-
-
-// LED CONFIG
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
-bool ledSwitched = false;
-int ledMaxBrigthness = 200;
-float fadeOutTimeDivider = 0.5;
-
+const char* publishTopic = "events";
 
 // OTA CONFIG
 bool ota_flag = true;
 int time_elapsed = 0;
 
+// LED CONFIG
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
+bool ledSwitched = false;
+int ledMaxBrigthness = 200;
+float fadeOutTimeDivider = 0.25;
+
+// SENSOR CONFIG
+float persistenceMultiplier = 0.65;
+int calibrationDuration = 150;
+int analogSensorReading;
+int analogValue;
+int baselineValue;
+int tresholdRatio;
+int minTreshold;
+float fadeValue;
+
+char* largeSpheres[] = { "03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30" };
+char* mediumSpheres[] = { "01" };
+char* smallSpheres[] = { "02" };
 
 void setup() {
   
   // Initialize the LED pin as an output
   pinMode(LED_PIN, OUTPUT);    
    
-  // Initialize serial
-  // while(!Serial);
   if(DEBUG_MODE){
     Serial.begin(115200);
-    Serial.println(" ");
     Serial.println(" ");
     Serial.print("ID : ");
     Serial.println(id);
     Serial.print("Mac Address : ");
     Serial.println(WiFi.macAddress());
   }
-  
+
   setup_wifi();
   setup_OTA();
+
+
 
   // Initialize LEDs
   pixels.begin();
@@ -93,6 +89,8 @@ void setup() {
 
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
+
+  configureSphereType();
 
   if(DEBUG_MODE){
     Serial.println(" ");
@@ -110,6 +108,35 @@ void loop() {
   detectCollision();
   updateLEDs();
   ensureConnection();
+}
+
+void configureSphereType(){
+  // LARGE SPHERES 
+  for(int i = 0; i<sizeof(largeSpheres)/sizeof(*largeSpheres); i++){
+    if(assigned_id == largeSpheres[i]){
+      tresholdRatio = 9;
+      minTreshold = 6;
+      Serial.println("LARGE");
+    }
+  }
+  
+  // MEDIUM SPHERES
+  for(int i = 0; i<sizeof(mediumSpheres)/sizeof(*mediumSpheres); i++){
+    if(assigned_id == mediumSpheres[i]){
+      tresholdRatio = 9;
+      minTreshold = 4;
+      Serial.println("MEDIUM");
+    }
+  }
+  
+  // SMALL SPHERES 
+  for(int i = 0; i<sizeof(smallSpheres)/sizeof(*smallSpheres); i++){
+    if(assigned_id == smallSpheres[i]){
+      tresholdRatio = 10;
+      minTreshold = 5;
+      Serial.println("SMALL");
+    }
+  }
 }
 
 
@@ -212,24 +239,31 @@ void readSensorValue() {
 
 void calculateTreshold() {
   baselineValue = baselineValue * persistenceMultiplier + (1-persistenceMultiplier) * analogValue;  
+}
+
+void detectCollision() { 
   if(SENSOR_VALUE_CONSOLE_MONITOR){
-    Serial.print(" ( ");
+    Serial.print(" signal:");
     Serial.print(analogValue);
-    Serial.print(" / ");
+    Serial.print(" (");
     Serial.print(baselineValue);
-    Serial.print(" / ");
+    Serial.print(") / treshold:");
+    Serial.print(abs(analogValue - baselineValue));
+    Serial.print(" (");
+    Serial.print(baselineValue / tresholdRatio);
+    Serial.print("|");
+    Serial.print(minTreshold);
+    Serial.print(") / LED:");
     Serial.print(fadeValue);
     Serial.println(" ) ");
   }
-}
-
-void detectCollision() {   
+    
   if(abs(analogValue - baselineValue) > (baselineValue / tresholdRatio) && abs(analogValue - baselineValue) > minTreshold && calibrationDuration == 0){
     int startingLed = NUMPIXELS;
     for(int k = startingLed; k < (startingLed + NUMPIXELS); k++){
         fadeValue = ledMaxBrigthness;
     }
-    //emitCollisionSignals();
+    emitCollisionSignals();
   }  
   if(calibrationDuration > 0){
     calibrationDuration--;
@@ -237,7 +271,7 @@ void detectCollision() {
 }
 
 void emitCollisionSignals() {
-  client.publish("test", id);
+  client.publish(publishTopic, assigned_id, true);
 }
 
 void updateLEDs() {
@@ -257,7 +291,11 @@ void ensureConnection(){
   if (!client.connected()) {
     reconnect();
   }
+  // DO NOT EDIT 
   client.loop();
+  // DO NOT TAKE THIS DELAY(10) AWAY, IT IS NECESSARY FOR CLIENT LOOP TO CONNECT TO WIFI
+  delay(10);
+  // DO NOT EDIT 
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
