@@ -9,8 +9,8 @@
 #include <ArduinoOTA.h>
 
 /// IMPORTANT change the last digit of the following three lines to give unique identifier
-const char* assigned_id = "03";
-const char* id = "ESP03";
+const char* assigned_id = "24";
+const char* id = "ESP24";
 const char* resetID = assigned_id;
 
 // SYSTEM CONFIG
@@ -51,7 +51,7 @@ int ledMaxBrigthness = 200;
 float fadeOutTimeDivider = 0.25;
 
 // SENSOR CONFIG
-float persistenceMultiplier = 0.65;
+float persistenceMultiplier = 0.75;
 int calibrationDuration = 150;
 int analogSensorReading;
 int analogValue;
@@ -60,9 +60,9 @@ int tresholdRatio;
 int minTreshold;
 float fadeValue;
 
-char* largeSpheres[] = { "03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30" };
-char* mediumSpheres[] = { "01" };
-char* smallSpheres[] = { "02" };
+char* largeSpheres[] = { "01","05","08","09","10","17","18","19","20","21","22","23","24","25","26","27","28","29","30" };
+char* mediumSpheres[] = { "02","04","06","11","14","15" };
+char* smallSpheres[] = { "03","07","08","12","13","16" };
 
 void setup() {
   
@@ -115,7 +115,7 @@ void configureSphereType(){
   for(int i = 0; i<sizeof(largeSpheres)/sizeof(*largeSpheres); i++){
     if(assigned_id == largeSpheres[i]){
       tresholdRatio = 9;
-      minTreshold = 6;
+      minTreshold = 4;
       Serial.println("LARGE");
     }
   }
@@ -132,8 +132,8 @@ void configureSphereType(){
   // SMALL SPHERES 
   for(int i = 0; i<sizeof(smallSpheres)/sizeof(*smallSpheres); i++){
     if(assigned_id == smallSpheres[i]){
-      tresholdRatio = 10;
-      minTreshold = 5;
+      tresholdRatio = 9;
+      minTreshold = 6;
       Serial.println("SMALL");
     }
   }
@@ -142,21 +142,21 @@ void configureSphereType(){
 
 void checkOTAflag() {
   if (ota_flag) {
-    pixelsOn(150);
+    setLedColor(0,ledMaxBrigthness,0);
     delay(200);
-    pixelsOff();
+    turnOffLed();
     delay(50);
-    pixelsOn(150);
+    setLedColor(0,ledMaxBrigthness,0);
     delay(200);
-    pixelsOff();
+    turnOffLed();
     while (time_elapsed < 15000) {
       ArduinoOTA.handle();
       time_elapsed = millis();
       delay(2);
     }
-    pixelsOn(150);
+    setLedColor(ledMaxBrigthness,0,0);
     delay(200);
-    pixelsOff();
+    turnOffLed();
     ota_flag = false;
   }
 }
@@ -165,7 +165,7 @@ void checkOTAflag() {
 void setup_wifi() {
 
   if(DELAY_MODE){
-    delay(10);
+    delay(15);
   }
 
   WiFi.mode(WIFI_STA);
@@ -302,7 +302,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
-  
+
+  // ANIMATE ALL
   if (strcmp(topic,"animation")==0){
     for (int i = 0; i < length; i++) {
       Serial.print((char)payload[i]);
@@ -315,19 +316,42 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
   } 
 
+  // LIGHT INDIVIDUAL ONE
+  if (strcmp(topic,"commands")==0){
+    for (int i = 0; i < length; i++) {
+      Serial.print((char)payload[i]);
+    }
+    char sphereNumber[3];
+    sphereNumber[0] = sphereNumber[0];
+    sphereNumber[1] = sphereNumber[1];
+    String payloadID = sphereNumber;
+    
+    if(payloadID == assigned_id){  /// HARD CODE HERE THE ESP IDENTIFIER
+      Serial.println("Resetting");
+      digitalWrite(GPIO0, HIGH);
+      digitalWrite(GPIO15, LOW);
+
+      WiFi.forceSleepBegin(); 
+      wdt_reset(); 
+      ESP.restart(); 
+      while(1){
+        wdt_reset();
+      }
+    }
+  } 
+
+  // RESET CONDITIONS
   if (strcmp(topic,"reset")==0){
     for (int i = 0; i < length; i++) {
       Serial.print((char)payload[i]);
     }
-    char resetNumber[3];
-    resetNumber[0] = payload[0];
-    resetNumber[1] = payload[1];
-    String one = resetNumber;
+    char sphereNumber[3];
+    sphereNumber[0] = sphereNumber[0];
+    sphereNumber[1] = sphereNumber[1];
+    String payloadID = sphereNumber;
     
-    Serial.println("");
-    Serial.println(one);
     
-    if(one == resetID){  /// HARD CODE HERE THE ESP IDENTIFIER
+    if(payloadID == resetID){  /// HARD CODE HERE THE ESP IDENTIFIER
       Serial.println("Resetting");
       digitalWrite(GPIO0, HIGH);
       digitalWrite(GPIO15, LOW);
@@ -365,11 +389,11 @@ void reconnect() {
   }
 }
 
-void pixelsOn(int brightness) {
+void setLedColor(int RedBrightness, int GreenBrightness, int BlueBrightness) {
   for (int i = 0; i < NUMPIXELS; i++) {
 
     // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-    pixels.setPixelColor(i, pixels.Color(brightness, 0, 0)); // Moderately bright green color.
+    pixels.setPixelColor(i, pixels.Color(RedBrightness, GreenBrightness, BlueBrightness)); // Moderately bright green color.
 
     pixels.show(); // This sends the updated pixel color to the hardware.
     // delay(delayval); // Delay for a period of time (in milliseconds).
@@ -377,17 +401,8 @@ void pixelsOn(int brightness) {
   }
 }
 
-
-void pixelsOff() {
-  for (int i = 0; i < NUMPIXELS; i++) {
-
-    // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-    pixels.setPixelColor(i, pixels.Color(0, 0, 0)); // Moderately bright green color.
-
-    pixels.show(); // This sends the updated pixel color to the hardware.
-    // delay(delayval); // Delay for a period of time (in milliseconds).
-
-  }
+void turnOffLed() {
+  setLedColor(0,0,0);
 }
 
 
