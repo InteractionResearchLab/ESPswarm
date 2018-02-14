@@ -9,29 +9,30 @@ var io = require('socket.io')(http);
 ///app.use('*', express.static(path.join(__dirname, 'public')));
 app.use(express.static('public'));
 
-app.get('/', function (req, res) {
-  console.log('Someone navigated to the home page');
-  res.send('Hello World!');
-});
-
 http.listen(3000, function () {
-  console.log('Example app listening on port 3000!');
+  
+  console.log('');
+  console.log(CrefFgGreen, 'LLUM 2018 balls installation', CrefReset);
+  console.log('');
+  console.log('initializing sync server...');
+  console.log(CrefFgBlue, 'admin console listening on port 3000', CrefReset);
+  console.log('');
 });
 
 
 io.on('connection', function(socket){
-  console.log('agent connected');
-  socket.emit('confirmedConnection', { message: "socket succefully creates" } );
+  console.log(CrefFgBlue, 'connected to console, adminID: ' + socket.id, CrefReset);
+  
+  socket.emit('confirmedConnection', { message: "socket succefully created" } );
 
   socket.on('disconnect', function(){
-    console.log('agent disconnected');
+    console.log(CrefFgRed, 'disconnected from console, adminID: ' + socket.id, CrefReset);
   });
 
   // SIMULATION EVENTS
   socket.on('simulation-animation-hit', function(data){
-    console.log("received data from socket");
-    console.log(data);
-    mqttClient.publish('animation', data.agent, { qos: 1 });
+    console.log(CrefDim, "admin command: <animation-hit> esp" + data.agent, CrefReset);
+    mqttClient.publish('events', data.agent, { qos: 2 });
   });
 
 
@@ -63,13 +64,15 @@ var mqttClient = mqtt.connect('mqtt://localhost:1883', {
 
 // Log connection status after connection is established
 mqttClient.on('connect', (connack) => {  
+  console.log('initializing MQTT connection log. . .');
   if (connack.sessionPresent) {
-    console.log('Already subbed, no subbing necessary');
-    mqttClient.publish('test', 'client reconnected', { qos: 1 });
+    console.log(CrefFgBlue, 'already subbed, no subbing necessary',CrefReset);
+    mqttClient.publish('system', 'client reconnected', { qos: 2 });
   } else {
-    console.log('First session! Subbing.');
-    mqttClient.subscribe('test', { qos: 1 });
-    animateLEDS();
+    console.log(CrefFgBlue, 'first session, subbing',CrefReset);
+    mqttClient.subscribe('system', { qos: 2 });
+    mqttClient.subscribe('events', { qos: 2 });
+    //animateLEDS();
   }
 });   
 
@@ -83,8 +86,43 @@ function animateLEDS() {
 
 // Log every message that's received on the broker
 mqttClient.on('message', (topic, message) => {  
-  console.log(`Received message: '${message}'`);
+  console.log(CrefBright,`received message: <${topic}> '${message}'`,CrefReset);
+
+  if(topic == "events"){
+    io.emit('raw-stream-events', { message: `${message}` } );
+  }
 });
 
 // animateLEDS();
 
+
+
+
+
+
+// CONSOLE COLOR CONFIG 
+var CrefReset = "\x1b[0m";
+var CrefBright = "\x1b[1m";
+var CrefDim = "\x1b[2m";
+var CrefUnderscore = "\x1b[4m";
+var CrefBlink = "\x1b[5m";
+var CrefReverse = "\x1b[7m";
+var CrefHidden = "\x1b[8m";
+
+var CrefFgBlack = "\x1b[30m";
+var CrefFgRed = "\x1b[31m";
+var CrefFgGreen = "\x1b[32m";
+var CrefFgYellow = "\x1b[33m";
+var CrefFgBlue = "\x1b[34m";
+var CrefFgMagenta = "\x1b[35m";
+var CrefFgCyan = "\x1b[36m";
+var CrefFgWhite = "\x1b[37m";
+
+var CrefBgBlack = "\x1b[40m";
+var CrefBgRed = "\x1b[41m";
+var CrefBgGreen = "\x1b[42m";
+var CrefBgYellow = "\x1b[43m";
+var CrefBgBlue = "\x1b[44m";
+var CrefBgMagenta = "\x1b[45m";
+var CrefBgCyan = "\x1b[46m";
+var CrefBgWhite = "\x1b[47m";

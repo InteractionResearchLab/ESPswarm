@@ -1,3 +1,29 @@
+:root {
+    /* AGENT STATUS COLORS */
+    --sphere-na-color: #666666; 
+    --sphere-na-font-color: #AAAAAA;
+    --sphere-connected-color: #00FF00; 
+    --sphere-lit-color: #FFFFFF; 
+    --sphere-lit-font-color: #000000; 
+
+    /* POSITIONING METRICS */
+    --agent-padding: 4px;
+}
+
+/* AGENT STATUS CLASSES */
+
+.AgentNotAvailable {
+    background-color: var(--sphere-na-color) !important;
+    color: var(--sphere-na-font-color) !important;
+}
+
+.AgentLit {
+    background-color: var(--sphere-lit-color) !important;
+    color: var(--sphere-lit-font-color) !important;
+}
+
+
+
 html {
     height: 100%;
 }
@@ -112,7 +138,7 @@ body {
 
 .AgentClient {
     position: relative;
-    width: calc(25% - 2px);
+    width: calc(12.5% - 2px);
     background-color: #CCCCCC;
     margin: 2px;
     margin-bottom: 0;
@@ -120,7 +146,7 @@ body {
     padding: 2px;
     padding-top: 0;
     box-sizing: border-box;
-    height: 18px;
+    height: 47.5px;
     font-size: 14px;
     display: inline-block;
     float: left;
@@ -132,24 +158,30 @@ body {
 }
 
 .AgentID {
-    position: relative;
-    float: left;
-    margin-right: 1px;
+    position: absolute;
+    margin-right: var(--agent-padding);
+    top: calc(var(--agent-padding) / 2);
+    left: var(--agent-padding);
     border: 0px solid red;
     height: 15px;
+
 }
 
 .AgentStatus {
-    position: relative;
-    float: right;
-    margin-right: 2px;
+    position: absolute;
     height: 15px;
+    margin-right: var(--agent-padding);
+    left: var(--agent-padding);
+    bottom: var(--agent-padding);
 }
 
 .AgentIP {
-    position: relative;
-    float: left;
+    position: absolute;
+    top: calc(var(--agent-padding) / 2);
+    right: var(--agent-padding);
     height: 15px;
     font-size: 10px;
     color: #888888;
 }
+
+

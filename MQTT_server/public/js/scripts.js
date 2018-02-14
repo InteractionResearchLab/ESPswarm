@@ -1,11 +1,26 @@
 
-console.log("lets see if our script is working");
-
 
 // Initialize socket connection
 var socket = io();
 socket.on("confirmedConnection", function(){
   console.log("securely connected to the server");
+});
+
+
+// observe raw event stream
+socket.on('raw-stream-events', function(data){
+  console.log("stream-raw: " + data)
+  console.log(data)
+
+  var espIDselector = "esp" + data.message;
+  var selectedESP = document.getElementById(espIDselector);
+
+  selectedESP.classList.add("AgentLit");
+  setTimeout(function(){
+    console.log("aa");
+    selectedESP.classList.remove("AgentLit");
+  }, 1000);
+
 });
 
 // add eventlisteners upon succesful window load
@@ -43,17 +58,17 @@ function setEventListeners(){
 // Assign click listener
 function assignAgentClickListener(agent, index) {
   agent.addEventListener("click", handleAgentClick);
-  console.log("Agent #" + index + " has click event handler assigned");
+  console.log("agent #" + index + " has click event handler assigned");
 }
 
 
 // Click handler
 function handleAgentClick() {
-  var agentIndex = this.childNodes[1].innerHTML.slice(1) ;
+  var agentIndex = this.id.slice(3) ;
   console.log(agentIndex);
-  console.log("Agent #" + agentIndex + " clicked");
+  console.log("agent #" + agentIndex + " has been clicked");
   socket.emit("simulation-animation-hit", {agent: agentIndex});
-  console.log("Simulating Animation on Agent #" + agentIndex);
+  console.log("simulating animation on agent #" + agentIndex);
 
   displayMessageOnWebConsole("admin", "system", "simulating hit on ESP#" + agentIndex);
 
@@ -77,26 +92,34 @@ function populateClients(){
 
 function generateAgentUI(agentIndex){
 
-  var agentIDNode = document.createElement("div");                // Create a <div> node
-  var agentIDText = document.createTextNode(agentIndex);          // Create a text node
-  agentIDNode.appendChild(agentIDText);                           // Append the text to <div>
+  var agentIDNode = document.createElement("div");                
+  
+  if(agentIndex < 9){
+    var agentNumeral = "0" + (agentIndex + 1);
+  }else {
+    var agentNumeral = agentIndex + 1;     
+  }
+  var agentIDText = document.createTextNode(agentNumeral);      
+  agentIDNode.appendChild(agentIDText);                           
   agentIDNode.className += " AgentID";
 
-  var agentStatusNode = document.createElement("div");            // Create a <div> node
-  var agentStatusText = document.createTextNode("init");  // Create a text node
-  agentStatusNode.appendChild(agentStatusText);                           // Append the text to <div>
+  var agentStatusNode = document.createElement("div");            
+  var agentStatusText = document.createTextNode("n/a");  
+  agentStatusNode.appendChild(agentStatusText);                           
   agentStatusNode.className += " AgentStatus";
 
-  var agentIPNode = document.createElement("div");                // Create a <div> node
-  var agentIPText = document.createTextNode("x.x");       // Create a text node
-  agentIPNode.appendChild(agentIPText);                           // Append the text to <div>
+  var agentIPNode = document.createElement("div");                
+  var agentIPText = document.createTextNode("x.x");       
+  agentIPNode.appendChild(agentIPText);                   
   agentIPNode.className += " AgentIP";
 
-  var agentClientNode = document.createElement("div");            // Create a <div> node
+  var agentClientNode = document.createElement("div");            
   agentClientNode.className += " AgentClient";
-  agentClientNode.appendChild(agentIDNode);                       // Append the children to main div
-  agentClientNode.appendChild(agentStatusNode);                   // Append the children to main div
-  agentClientNode.appendChild(agentIPNode);                       // Append the children to main div
+  agentClientNode.className += " AgentNotAvailable";
+  agentClientNode.id = ("esp" + agentNumeral);
+  agentClientNode.appendChild(agentIDNode);                       
+  agentClientNode.appendChild(agentStatusNode);                   
+  agentClientNode.appendChild(agentIPNode);                       
    
   return agentClientNode;
 }
