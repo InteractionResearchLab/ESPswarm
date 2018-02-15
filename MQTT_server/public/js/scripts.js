@@ -9,15 +9,13 @@ socket.on("confirmedConnection", function(){
 
 // observe raw event stream
 socket.on('raw-stream-events', function(data){
-  console.log("stream-raw: " + data)
-  console.log(data)
+  console.log("stream-raw: " + data.message)
 
   var espIDselector = "esp" + data.message;
   var selectedESP = document.getElementById(espIDselector);
 
   selectedESP.classList.add("AgentLit");
   setTimeout(function(){
-    console.log("aa");
     selectedESP.classList.remove("AgentLit");
   }, 1000);
 
@@ -58,17 +56,17 @@ function setEventListeners(){
 // Assign click listener
 function assignAgentClickListener(agent, index) {
   agent.addEventListener("click", handleAgentClick);
-  console.log("agent #" + index + " has click event handler assigned");
+  console.log("agent #" + (index + 1) + " has click event handler assigned");
 }
 
 
 // Click handler
 function handleAgentClick() {
   var agentIndex = this.id.slice(3) ;
-  console.log(agentIndex);
+  
   console.log("agent #" + agentIndex + " has been clicked");
   socket.emit("simulation-animation-hit", {agent: agentIndex});
-  console.log("simulating animation on agent #" + agentIndex);
+  console.log("animation requested on agent #" + agentIndex);
 
   displayMessageOnWebConsole("admin", "system", "simulating hit on ESP#" + agentIndex);
 
@@ -85,7 +83,7 @@ function populateClients(){
   for(var i = 0; i<64; i++){
       // add the newly created element and its content into the DOM 
       connectedClients.appendChild(generateAgentUI(i)); 
-      console.log("Agent #" + i + " UI element has been generated");
+      console.log("Agent #" + (i +1) + " UI element has been generated");
   }
 
 }
