@@ -9,8 +9,8 @@
 #include <ArduinoOTA.h>
 
 /// IMPORTANT change the last digit of the following three lines to give unique identifier
-const char* assigned_id = "24";
-const char* id = "ESP24";
+const char* assigned_id = "22";
+const char* id = "ESP22";
 const char* resetID = assigned_id;
 
 // SYSTEM CONFIG
@@ -22,22 +22,26 @@ const char* resetID = assigned_id;
 #define GPIO0 D3
 #define GPIO15 D8
 
+bool RGB_VALUE_CONSOLE_MONITOR = false;
+bool SENSOR_VALUE_CONSOLE_MONITOR = true;
+bool HIT_INTENSITY_MODE = false;
 bool DEBUG_MODE = true;
 bool DELAY_MODE = true;
-bool SENSOR_VALUE_CONSOLE_MONITOR = true;
 int delayDuration = 1;
 
 // WIFI CONFIG - Update these with values suitable for your network.
 WiFiClient wifiClient;
+//
 //const char* ssid = "IAAC-WIFI";
 //const char* password = "enteriaac2013";
+//const char* mqtt_server = "192.168.5.56"; // localhost
+
 const char* ssid = "llum_installation_wifi";
 const char* password = "99334994";
 const char* mqtt_server = "192.168.1.150"; // Raspberry pi has a static ip 192.168.1.150
 
 // MESSAGE BROKER CONFIG
 PubSubClient client(wifiClient);
-const char* subscribeTopic = "animation" ;
 const char* publishTopic = "events";
 
 // OTA CONFIG
@@ -46,12 +50,14 @@ int time_elapsed = 0;
 
 // LED CONFIG
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
+bool LED_PULSE_MODE = false;
 bool ledSwitched = false;
+float fadeOutTimeDivider = 4;
 int ledMaxBrigthness = 200;
-float fadeOutTimeDivider = 0.25;
+int pulseFactor = 1;
 
 // SENSOR CONFIG
-float persistenceMultiplier = 0.75;
+float persistenceMultiplier = 0.7;
 int calibrationDuration = 150;
 int analogSensorReading;
 int analogValue;
@@ -59,10 +65,21 @@ int baselineValue;
 int tresholdRatio;
 int minTreshold;
 float fadeValue;
+float maxRatio = 255;
+float redRatio = maxRatio;
+float greenRatio = maxRatio;
+float blueRatio = maxRatio;
+int hitIntensity = 0;
+int calculatedIntensity = 0;
+int hitIntensityMin = 50;
+int hitIntensityMax = 500;
+int hitIntensityDecrement = 1;
+int hitIntensityDivider = 10000;
+int hitCounter = 0;
 
-char* largeSpheres[] = { "01","05","08","09","10","17","18","19","20","21","22","23","24","25","26","27","28","29","30" };
-char* mediumSpheres[] = { "02","04","06","11","14","15" };
-char* smallSpheres[] = { "03","07","08","12","13","16" };
+char* unconfiguredSpheres[] = { "03","02","01","18","21","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64" };
+char* configuredSpheres[] = { "04","05","06","07","08","09","10","11","12","13","14","15","16","17","20","22","23","24","25" };
+char* problematicSpheres[] = { "19" };
 
 void setup() {
   
@@ -111,34 +128,49 @@ void loop() {
 }
 
 void configureSphereType(){
-  // LARGE SPHERES 
-  for(int i = 0; i<sizeof(largeSpheres)/sizeof(*largeSpheres); i++){
-    if(assigned_id == largeSpheres[i]){
-      tresholdRatio = 9;
-      minTreshold = 4;
-      Serial.println("LARGE");
+  // UNCONFIGURED SPHERES 
+  Serial.print("Sphere#");
+  Serial.print(assigned_id);
+  for(int i = 0; i<sizeof(unconfiguredSpheres)/sizeof(*unconfiguredSpheres); i++){
+    if(assigned_id == unconfiguredSpheres[i]){
+      tresholdRatio = 40;
+      minTreshold = 7;
+      Serial.println(": unconfigured");
     }
   }
   
-  // MEDIUM SPHERES
-  for(int i = 0; i<sizeof(mediumSpheres)/sizeof(*mediumSpheres); i++){
-    if(assigned_id == mediumSpheres[i]){
-      tresholdRatio = 9;
-      minTreshold = 4;
-      Serial.println("MEDIUM");
+  // CONFIGURED SPHERES
+  for(int i = 0; i<sizeof(configuredSpheres)/sizeof(*configuredSpheres); i++){
+    if(assigned_id == configuredSpheres[i]){
+      tresholdRatio = 40;
+      minTreshold = 7;
+      Serial.println(": configured");
     }
   }
   
-  // SMALL SPHERES 
-  for(int i = 0; i<sizeof(smallSpheres)/sizeof(*smallSpheres); i++){
-    if(assigned_id == smallSpheres[i]){
-      tresholdRatio = 9;
-      minTreshold = 6;
-      Serial.println("SMALL");
+  // PROBLEMATIC SPHERES 
+  for(int i = 0; i<sizeof(problematicSpheres)/sizeof(*problematicSpheres); i++){
+    if(assigned_id == problematicSpheres[i]){
+      tresholdRatio = 40;
+      minTreshold = 7;
+      Serial.println(": problematic");
     }
   }
 }
 
+
+
+void setLedColor(int RedBrightness, int GreenBrightness, int BlueBrightness) {
+  for (int i = 0; i < NUMPIXELS; i++) {
+
+    // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
+    pixels.setPixelColor(i, pixels.Color(RedBrightness, GreenBrightness, BlueBrightness)); // Moderately bright green color.
+
+    pixels.show(); // This sends the updated pixel color to the hardware.
+    // delay(delayval); // Delay for a period of time (in milliseconds).
+
+  }
+}
 
 void checkOTAflag() {
   if (ota_flag) {
@@ -179,28 +211,16 @@ void setup_wifi() {
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
- 
-//  WiFi.begin(ssid, password);
-//
-//  while (WiFi.status() != WL_CONNECTED) {
-//    delay(500);
-//    if(DEBUG_MODE){
-//      Serial.print(".");
-//    }
-//  }
 
 }
 
 void setup_OTA(){
   // Port defaults to 8266
   // ArduinoOTA.setPort(8266);
-
   // Hostname defaults to esp8266-[ChipID]
   // ArduinoOTA.setHostname("myesp8266");
-
   // No authentication by default
-  //ArduinoOTA.setPassword((const char *)"123");
-
+  // ArduinoOTA.setPassword((const char *)"123");
   ArduinoOTA.onStart([]() {
     Serial.println("Start");
   });
@@ -259,31 +279,124 @@ void detectCollision() {
   }
     
   if(abs(analogValue - baselineValue) > (baselineValue / tresholdRatio) && abs(analogValue - baselineValue) > minTreshold && calibrationDuration == 0){
-    int startingLed = NUMPIXELS;
-    for(int k = startingLed; k < (startingLed + NUMPIXELS); k++){
-        fadeValue = ledMaxBrigthness;
-    }
-    emitCollisionSignals();
+    if(HIT_INTENSITY_MODE){
+      calculatedIntensity = abs(analogValue - baselineValue) - (baselineValue / tresholdRatio); 
+    }    
+    registerHit();
   }  
   if(calibrationDuration > 0){
     calibrationDuration--;
   }  
 }
 
+void registerHit(){
+  if(RGB_VALUE_CONSOLE_MONITOR){
+    Serial.print("calculated intensity: ");
+    Serial.print(calculatedIntensity);
+    Serial.print("vs: ");
+    Serial.println(hitIntensity);
+  }
+
+  if(HIT_INTENSITY_MODE){
+    if(calculatedIntensity * hitIntensityDivider > hitCounter){
+      hitIntensity = calculatedIntensity;
+      if(hitIntensity < hitIntensityMin){
+        hitIntensity = hitIntensityMin;
+      }
+      hitCounter = hitIntensity * hitIntensityDivider;
+    }
+  }
+  
+  visualizeHit();
+  emitCollisionSignals();
+}
+
+void visualizeHit(){
+  int startingLed = NUMPIXELS;
+  for(int k = startingLed; k < (startingLed + NUMPIXELS); k++){
+      fadeValue = ledMaxBrigthness;
+  }
+}
+
 void emitCollisionSignals() {
   client.publish(publishTopic, assigned_id, true);
+
+  if(HIT_INTENSITY_MODE){
+    if(RGB_VALUE_CONSOLE_MONITOR){
+      Serial.print("Intensity: ");
+    }
+    
+    String hitReportDraft = "xx 000";
+    hitReportDraft[0] = ((String)assigned_id)[0];
+    hitReportDraft[1] = ((String)assigned_id)[1];
+    int intensityDigits = ((String)hitIntensity).length();
+    
+    for(int i = 0; i < intensityDigits + 1; i++){
+      hitReportDraft[6-i] = ((String)hitIntensity)[intensityDigits-i];
+    }
+  
+    if(RGB_VALUE_CONSOLE_MONITOR){
+      Serial.println(hitReportDraft);
+    }
+    
+    char hitReport[7];
+    strncpy(hitReport, hitReportDraft.c_str(), sizeof(hitReport));
+    hitReport[sizeof(hitReport) - 1] = '\0';
+    client.publish("events-hit", hitReport);  
+  }
+  
 }
 
 void updateLEDs() {
-  for(int i=0; i < NUMPIXELS; i++){
-        pixels.setPixelColor(i, (int)fadeValue, (int)fadeValue, (int)fadeValue);     
-        
-        fadeValue -= fadeOutTimeDivider;
-        if(fadeValue < 0) {
-          fadeValue = 0;
-        }
+
+  int redValue, greenValue, blueValue;
+
+  if(HIT_INTENSITY_MODE){
+    redValue =  (int)(fadeValue * (int)(hitIntensity * hitIntensityDivider / hitIntensityMax) * redRatio / (maxRatio * hitIntensityDivider));
+    greenValue = (int)(fadeValue * (int)(hitIntensity * hitIntensityDivider / hitIntensityMax) * greenRatio / (maxRatio * hitIntensityDivider));
+    blueValue = (int)(fadeValue * (int)(hitIntensity * hitIntensityDivider / hitIntensityMax) * blueRatio / (maxRatio * hitIntensityDivider));
   }
+  else {
+    redValue =  (int)(fadeValue * (int) redRatio / (maxRatio));
+    greenValue = (int)(fadeValue * (int) greenRatio / (maxRatio));
+    blueValue = (int)(fadeValue * (int) blueRatio / (maxRatio));  
+  }
+  
+  if(RGB_VALUE_CONSOLE_MONITOR){
+    Serial.print("RGB values: ");
+    Serial.print(redValue);
+    Serial.print("/");
+    Serial.print(greenValue);
+    Serial.print("/");
+    Serial.println(blueValue);
+  }
+  
+  for(int i=0; i < NUMPIXELS; i++){
+    if(LED_PULSE_MODE){
+      pixels.setPixelColor(i, LEDpulsator(fadeValue * redRatio / maxRatio), LEDpulsator(fadeValue * greenRatio / maxRatio), LEDpulsator(fadeValue * blueRatio / maxRatio));       
+    } else {
+      pixels.setPixelColor(i, redValue, greenValue, blueValue);        
+    }
+  }
+
+  fadeValue -= fadeOutTimeDivider;
+  if(fadeValue < 0) {
+    fadeValue = 0;
+  }
+
+  if(HIT_INTENSITY_MODE){
+    hitCounter -= hitIntensityDivider;
+    if(hitCounter < 0) {
+      hitCounter = 0;
+      hitIntensity = 0;
+    }
+  }
+  
   pixels.show();
+}
+
+int LEDpulsator(float fadeNumeral) {
+  return (int)(fadeNumeral * ( sin(pulseFactor*2*M_PI*fadeNumeral/255)  + 1) / 2);
 }
 
 void ensureConnection(){
@@ -298,17 +411,18 @@ void ensureConnection(){
   // DO NOT EDIT 
 }
 
-void callback(char* topic, byte* payload, unsigned int length) {
+void callback(char* topic, byte* payload, unsigned int messageLength) {
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
+  Serial.print("- ");
 
   // ANIMATE ALL
   if (strcmp(topic,"animation")==0){
-    for (int i = 0; i < length; i++) {
+    for (int i = 0; i < messageLength; i++) {
       Serial.print((char)payload[i]);
     }
-    Serial.println();
+    Serial.println(' ');
     if ((char)payload[0] == '0') {  
       fadeValue = 0;
     } else if((char)payload[0] == '1'){
@@ -316,40 +430,22 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
   } 
 
-  // LIGHT INDIVIDUAL ONE
-  if (strcmp(topic,"commands")==0){
-    for (int i = 0; i < length; i++) {
-      Serial.print((char)payload[i]);
-    }
-    char sphereNumber[3];
-    sphereNumber[0] = sphereNumber[0];
-    sphereNumber[1] = sphereNumber[1];
-    String payloadID = sphereNumber;
-    
-    if(payloadID == assigned_id){  /// HARD CODE HERE THE ESP IDENTIFIER
-      Serial.println("Resetting");
-      digitalWrite(GPIO0, HIGH);
-      digitalWrite(GPIO15, LOW);
-
-      WiFi.forceSleepBegin(); 
-      wdt_reset(); 
-      ESP.restart(); 
-      while(1){
-        wdt_reset();
-      }
-    }
-  } 
-
   // RESET CONDITIONS
   if (strcmp(topic,"reset")==0){
-    for (int i = 0; i < length; i++) {
+    for (int i = 0; i < messageLength; i++) {
       Serial.print((char)payload[i]);
     }
+    Serial.println(' ');
     char sphereNumber[3];
-    sphereNumber[0] = sphereNumber[0];
-    sphereNumber[1] = sphereNumber[1];
+    sphereNumber[0] = (char)payload[0];
+    sphereNumber[1] = (char)payload[1];
+    sphereNumber[2] = (char)'\0';
     String payloadID = sphereNumber;
-    
+
+    Serial.print("Comparison: ");
+    Serial.print(payloadID);
+    Serial.print(" vs ");
+    Serial.println(resetID);
     
     if(payloadID == resetID){  /// HARD CODE HERE THE ESP IDENTIFIER
       Serial.println("Resetting");
@@ -363,13 +459,113 @@ void callback(char* topic, byte* payload, unsigned int length) {
         wdt_reset();
       }
     }
-  }   
+  }  
+
+  
+   // SET & ANIMATE COLOR 
+  if (strcmp(topic,"animatecolor")==0){
+    char sphereNumber[3];
+    char hexNumeral[8];
+    for (int i = 0; i < messageLength; i++) {
+      Serial.print((char)payload[i]);
+    }
+    Serial.println();
+    
+    hexNumeral[0] = (char)payload[3];
+    hexNumeral[1] = (char)payload[4];
+    hexNumeral[2] = (char)payload[5];
+    hexNumeral[3] = (char)payload[6];
+    hexNumeral[4] = (char)payload[7];
+    hexNumeral[5] = (char)payload[8];
+    hexNumeral[6] = (char)payload[9];
+    hexNumeral[7] = (char)'\0';
+    String hexString = hexNumeral;
+
+    sphereNumber[0] = (char)payload[0];
+    sphereNumber[1] = (char)payload[1];
+    sphereNumber[2] = (char)'\0';
+    String payloadID = sphereNumber;
+
+    Serial.print("Comparison: ");
+    Serial.print(payloadID);
+    Serial.print(" vs ");
+    Serial.println(assigned_id);
+    
+    if(payloadID == assigned_id){  /// HARD CODE HERE THE ESP IDENTIFIER
+      Serial.print("Lighting up LED for ");
+      Serial.println(assigned_id);
+
+      
+      setSphereColor(hexString);
+      calculatedIntensity = 500;
+      registerHit();
+    }
+  }  
+
+
+  // SET ESP COLOR 
+  if (strcmp(topic,"setcolor")==0){
+    char sphereNumber[3];
+    char hexNumeral[8];
+    for (int i = 0; i < messageLength; i++) {
+      Serial.print((char)payload[i]);
+    }
+    Serial.println();
+    
+    hexNumeral[0] = (char)payload[3];
+    hexNumeral[1] = (char)payload[4];
+    hexNumeral[2] = (char)payload[5];
+    hexNumeral[3] = (char)payload[6];
+    hexNumeral[4] = (char)payload[7];
+    hexNumeral[5] = (char)payload[8];
+    hexNumeral[6] = (char)payload[9];
+    hexNumeral[7] = (char)'\0';
+    String hexString = hexNumeral;
+
+    sphereNumber[0] = (char)payload[0];
+    sphereNumber[1] = (char)payload[1];
+    sphereNumber[2] = (char)'\0';
+    String payloadID = sphereNumber;
+
+    Serial.print("Comparison: ");
+    Serial.print(payloadID);
+    Serial.print(" vs ");
+    Serial.println(assigned_id);
+    
+    if(payloadID == assigned_id){  /// HARD CODE HERE THE ESP IDENTIFIER
+      Serial.print("Lighting up LED for ");
+      Serial.println(assigned_id);
+      
+      setSphereColor(hexString);
+    }
+  }  
+}
+
+void setSphereColor(String hexstring)
+{
+ 
+    long number = (long) strtol( &hexstring[1], NULL, 16);
+    int r = number >> 16;
+    int g = number >> 8 & 0xFF;
+    int b = number & 0xFF;
+
+    Serial.print("red value: ");
+    Serial.println(r);
+    Serial.print("green value: ");
+    Serial.println(g);
+    Serial.print("blue value: ");
+    Serial.println(b);
+
+    redRatio = r;
+    greenRatio = g;
+    blueRatio = b;
 }
 
 
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
+    turnOffLed();
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
     if (client.connect(id)) { // IMPORTANT connect each ESP with a unique identifier
@@ -378,6 +574,8 @@ void reconnect() {
       // client.publish("test", "hello world");
       // ... and resubscribe
       client.subscribe("animation");
+      client.subscribe("animatecolor");
+      client.subscribe("setcolor");
       client.subscribe("reset");
     } else {
       Serial.print("failed, rc=");
@@ -389,20 +587,7 @@ void reconnect() {
   }
 }
 
-void setLedColor(int RedBrightness, int GreenBrightness, int BlueBrightness) {
-  for (int i = 0; i < NUMPIXELS; i++) {
-
-    // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-    pixels.setPixelColor(i, pixels.Color(RedBrightness, GreenBrightness, BlueBrightness)); // Moderately bright green color.
-
-    pixels.show(); // This sends the updated pixel color to the hardware.
-    // delay(delayval); // Delay for a period of time (in milliseconds).
-
-  }
-}
-
 void turnOffLed() {
-  setLedColor(0,0,0);
+  calculatedIntensity = 0;
 }
-
 
