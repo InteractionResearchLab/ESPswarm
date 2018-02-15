@@ -9,8 +9,8 @@
 #include <ArduinoOTA.h>
 
 /// IMPORTANT change the last digit of the following three lines to give unique identifier
-const char* assigned_id = "22";
-const char* id = "ESP22";
+const char* assigned_id = "23";
+const char* id = "ESP23";
 const char* resetID = assigned_id;
 
 // SYSTEM CONFIG
@@ -24,7 +24,7 @@ const char* resetID = assigned_id;
 
 bool RGB_VALUE_CONSOLE_MONITOR = false;
 bool SENSOR_VALUE_CONSOLE_MONITOR = true;
-bool HIT_INTENSITY_MODE = false;
+bool HIT_INTENSITY_MODE = true;
 bool DEBUG_MODE = true;
 bool DELAY_MODE = true;
 int delayDuration = 1;
@@ -52,9 +52,11 @@ int time_elapsed = 0;
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 bool LED_PULSE_MODE = false;
 bool ledSwitched = false;
-float fadeOutTimeDivider = 4;
-int ledMaxBrigthness = 200;
+float fadeOutTimeDivider = 1;
+int ledMaxBrightness = 210;
+int ledMinBrightness = 20;
 int pulseFactor = 1;
+bool ANIMATION_MODE = false;
 
 // SENSOR CONFIG
 float persistenceMultiplier = 0.7;
@@ -72,10 +74,9 @@ float blueRatio = maxRatio;
 int hitIntensity = 0;
 int calculatedIntensity = 0;
 int hitIntensityMin = 50;
-int hitIntensityMax = 500;
-int hitIntensityDecrement = 1;
-int hitIntensityDivider = 10000;
-int hitCounter = 0;
+int hitIntensityMax = 750;
+
+
 
 char* unconfiguredSpheres[] = { "03","02","01","18","21","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64" };
 char* configuredSpheres[] = { "04","05","06","07","08","09","10","11","12","13","14","15","16","17","20","22","23","24","25" };
@@ -174,11 +175,11 @@ void setLedColor(int RedBrightness, int GreenBrightness, int BlueBrightness) {
 
 void checkOTAflag() {
   if (ota_flag) {
-    setLedColor(0,ledMaxBrigthness,0);
+    setLedColor(0,ledMaxBrightness,0);
     delay(200);
     turnOffLed();
     delay(50);
-    setLedColor(0,ledMaxBrigthness,0);
+    setLedColor(0,ledMaxBrightness,0);
     delay(200);
     turnOffLed();
     while (time_elapsed < 15000) {
@@ -186,7 +187,7 @@ void checkOTAflag() {
       time_elapsed = millis();
       delay(2);
     }
-    setLedColor(ledMaxBrigthness,0,0);
+    setLedColor(ledMaxBrightness,0,0);
     delay(200);
     turnOffLed();
     ota_flag = false;
@@ -290,7 +291,7 @@ void detectCollision() {
 }
 
 void registerHit(){
-  if(RGB_VALUE_CONSOLE_MONITOR){
+  if(HIT_INTENSITY_MODE){
     Serial.print("calculated intensity: ");
     Serial.print(calculatedIntensity);
     Serial.print("vs: ");
@@ -298,31 +299,34 @@ void registerHit(){
   }
 
   if(HIT_INTENSITY_MODE){
-    if(calculatedIntensity * hitIntensityDivider > hitCounter){
-      hitIntensity = calculatedIntensity;
-      if(hitIntensity < hitIntensityMin){
-        hitIntensity = hitIntensityMin;
+
+    int intensityRatio = (calculatedIntensity * ledMaxBrightness / hitIntensityMax);
+    
+    Serial.print(fadeValue);
+    Serial.print(" vs ");
+    Serial.print("fadeintensity//");
+    Serial.print(intensityRatio);
+    Serial.print(" vs ");
+    Serial.println(calculatedIntensity);
+    
+    if(intensityRatio > fadeValue){        
+      fadeValue = intensityRatio;
+      if(fadeValue < ledMinBrightness) {
+        fadeValue = ledMinBrightness;
       }
-      hitCounter = hitIntensity * hitIntensityDivider;
     }
   }
   
-  visualizeHit();
   emitCollisionSignals();
 }
 
-void visualizeHit(){
-  int startingLed = NUMPIXELS;
-  for(int k = startingLed; k < (startingLed + NUMPIXELS); k++){
-      fadeValue = ledMaxBrigthness;
-  }
-}
-
 void emitCollisionSignals() {
-  client.publish(publishTopic, assigned_id, true);
-
+  if(!ANIMATION_MODE){
+    client.publish(publishTopic, assigned_id, true);  
+  }
+  
   if(HIT_INTENSITY_MODE){
-    if(RGB_VALUE_CONSOLE_MONITOR){
+    if(HIT_INTENSITY_MODE){
       Serial.print("Intensity: ");
     }
     
@@ -335,7 +339,7 @@ void emitCollisionSignals() {
       hitReportDraft[6-i] = ((String)hitIntensity)[intensityDigits-i];
     }
   
-    if(RGB_VALUE_CONSOLE_MONITOR){
+    if(HIT_INTENSITY_MODE){
       Serial.println(hitReportDraft);
     }
     
@@ -348,19 +352,11 @@ void emitCollisionSignals() {
 }
 
 void updateLEDs() {
+  
+  int redValue =  (int)(fadeValue * (int) redRatio / (maxRatio));
+  int greenValue = (int)(fadeValue * (int) greenRatio / (maxRatio));
+  int blueValue = (int)(fadeValue * (int) blueRatio / (maxRatio));  
 
-  int redValue, greenValue, blueValue;
-
-  if(HIT_INTENSITY_MODE){
-    redValue =  (int)(fadeValue * (int)(hitIntensity * hitIntensityDivider / hitIntensityMax) * redRatio / (maxRatio * hitIntensityDivider));
-    greenValue = (int)(fadeValue * (int)(hitIntensity * hitIntensityDivider / hitIntensityMax) * greenRatio / (maxRatio * hitIntensityDivider));
-    blueValue = (int)(fadeValue * (int)(hitIntensity * hitIntensityDivider / hitIntensityMax) * blueRatio / (maxRatio * hitIntensityDivider));
-  }
-  else {
-    redValue =  (int)(fadeValue * (int) redRatio / (maxRatio));
-    greenValue = (int)(fadeValue * (int) greenRatio / (maxRatio));
-    blueValue = (int)(fadeValue * (int) blueRatio / (maxRatio));  
-  }
   
   if(RGB_VALUE_CONSOLE_MONITOR){
     Serial.print("RGB values: ");
@@ -370,26 +366,20 @@ void updateLEDs() {
     Serial.print("/");
     Serial.println(blueValue);
   }
-  
-  for(int i=0; i < NUMPIXELS; i++){
-    if(LED_PULSE_MODE){
-      pixels.setPixelColor(i, LEDpulsator(fadeValue * redRatio / maxRatio), LEDpulsator(fadeValue * greenRatio / maxRatio), LEDpulsator(fadeValue * blueRatio / maxRatio));       
-    } else {
-      pixels.setPixelColor(i, redValue, greenValue, blueValue);        
+
+  if(!ANIMATION_MODE){
+    for(int i=0; i < NUMPIXELS; i++){
+      if(LED_PULSE_MODE){
+        pixels.setPixelColor(i, LEDpulsator(fadeValue * redRatio / maxRatio), LEDpulsator(fadeValue * greenRatio / maxRatio), LEDpulsator(fadeValue * blueRatio / maxRatio));       
+      } else {
+        pixels.setPixelColor(i, redValue, greenValue, blueValue);        
+      }
     }
   }
-
+  
   fadeValue -= fadeOutTimeDivider;
   if(fadeValue < 0) {
     fadeValue = 0;
-  }
-
-  if(HIT_INTENSITY_MODE){
-    hitCounter -= hitIntensityDivider;
-    if(hitCounter < 0) {
-      hitCounter = 0;
-      hitIntensity = 0;
-    }
   }
   
   pixels.show();
@@ -426,7 +416,7 @@ void callback(char* topic, byte* payload, unsigned int messageLength) {
     if ((char)payload[0] == '0') {  
       fadeValue = 0;
     } else if((char)payload[0] == '1'){
-      fadeValue = ledMaxBrigthness;
+      fadeValue = ledMaxBrightness;
     }
   } 
 
@@ -463,7 +453,7 @@ void callback(char* topic, byte* payload, unsigned int messageLength) {
 
   
    // SET & ANIMATE COLOR 
-  if (strcmp(topic,"animatecolor")==0){
+  if (strcmp(topic,"animate-color")==0){
     char sphereNumber[3];
     char hexNumeral[8];
     for (int i = 0; i < messageLength; i++) {
@@ -504,7 +494,7 @@ void callback(char* topic, byte* payload, unsigned int messageLength) {
 
 
   // SET ESP COLOR 
-  if (strcmp(topic,"setcolor")==0){
+  if (strcmp(topic,"set-color")==0){
     char sphereNumber[3];
     char hexNumeral[8];
     for (int i = 0; i < messageLength; i++) {
@@ -538,7 +528,78 @@ void callback(char* topic, byte* payload, unsigned int messageLength) {
       
       setSphereColor(hexString);
     }
+  } 
+
+// SET ALL ESPS COLOR 
+  if (strcmp(topic,"set-all-color")==0){
+    char hexNumeral[8];
+    for (int i = 0; i < messageLength; i++) {
+      Serial.print((char)payload[i]);
+    }
+    Serial.println();
+    
+    hexNumeral[0] = (char)payload[0];
+    hexNumeral[1] = (char)payload[1];
+    hexNumeral[2] = (char)payload[2];
+    hexNumeral[3] = (char)payload[3];
+    hexNumeral[4] = (char)payload[4];
+    hexNumeral[5] = (char)payload[5];
+    hexNumeral[6] = (char)payload[6];
+    hexNumeral[7] = (char)'\0';
+    String hexString = hexNumeral;
+
+    Serial.print("changing all esp color");
+    
+    setSphereColor(hexString);
+
+  } 
+
+  // ANIMATION CONDITIONS
+  if (strcmp(topic,"animation-mode-on")==0){
+    for (int i = 0; i < messageLength; i++) {
+      Serial.print((char)payload[i]);
+    }
+    Serial.println(' ');
+    char sphereNumber[3];
+    sphereNumber[0] = (char)payload[0];
+    sphereNumber[1] = (char)payload[1];
+    sphereNumber[2] = (char)'\0';
+    String payloadID = sphereNumber;
+
+    Serial.print("Comparison: ");
+    Serial.print(payloadID);
+    Serial.print(" vs ");
+    Serial.println(assigned_id);
+    
+    if(payloadID == assigned_id){  /// HARD CODE HERE THE ESP IDENTIFIER
+      activateAnimationMode();
+    }
   }  
+
+  // ANIMATION CONDITIONS
+  if (strcmp(topic,"animation-mode-off")==0){
+    for (int i = 0; i < messageLength; i++) {
+      Serial.print((char)payload[i]);
+    }
+    Serial.println(' ');
+    char sphereNumber[3];
+    sphereNumber[0] = (char)payload[0];
+    sphereNumber[1] = (char)payload[1];
+    sphereNumber[2] = (char)'\0';
+    String payloadID = sphereNumber;
+
+    Serial.print("Comparison: ");
+    Serial.print(payloadID);
+    Serial.print(" vs ");
+    Serial.println(assigned_id);
+    
+    if(payloadID == assigned_id){  /// HARD CODE HERE THE ESP IDENTIFIER
+      deactivateAnimationMode();
+    }
+  }  
+
+
+  
 }
 
 void setSphereColor(String hexstring)
@@ -565,7 +626,7 @@ void setSphereColor(String hexstring)
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
-    turnOffLed();
+    
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
     if (client.connect(id)) { // IMPORTANT connect each ESP with a unique identifier
@@ -574,8 +635,11 @@ void reconnect() {
       // client.publish("test", "hello world");
       // ... and resubscribe
       client.subscribe("animation");
-      client.subscribe("animatecolor");
-      client.subscribe("setcolor");
+      client.subscribe("animate-color");
+      client.subscribe("animation-mode-on");
+      client.subscribe("animation-mode-off");
+      client.subscribe("set-color");
+      client.subscribe("set-all-color");
       client.subscribe("reset");
     } else {
       Serial.print("failed, rc=");
@@ -589,5 +653,15 @@ void reconnect() {
 
 void turnOffLed() {
   calculatedIntensity = 0;
+}
+
+void activateAnimationMode() {
+  Serial.println("animation mode activated");
+  ANIMATION_MODE = true;
+}
+
+void deactivateAnimationMode() {
+  Serial.println("animation mode deactivated");
+  ANIMATION_MODE = false;
 }
 
