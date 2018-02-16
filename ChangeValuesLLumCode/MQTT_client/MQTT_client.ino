@@ -9,8 +9,8 @@
 #include <ArduinoOTA.h>
 
 /// IMPORTANT change the last digit of the following three lines to give unique identifier
-const char* assigned_id = "08";
-const char* id = "ESP08";
+const char* assigned_id = "06";
+const char* id = "ESP06";
 bool networkCapable = true;
 
 const char* resetID = assigned_id;
