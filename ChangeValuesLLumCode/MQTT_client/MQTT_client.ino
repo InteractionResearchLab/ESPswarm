@@ -9,8 +9,10 @@
 #include <ArduinoOTA.h>
 
 /// IMPORTANT change the last digit of the following three lines to give unique identifier
-const char* assigned_id = "23";
-const char* id = "ESP23";
+const char* assigned_id = "08";
+const char* id = "ESP08";
+bool networkCapable = true;
+
 const char* resetID = assigned_id;
 
 // SYSTEM CONFIG
@@ -29,6 +31,8 @@ bool DEBUG_MODE = true;
 bool DELAY_MODE = true;
 int delayDuration = 1;
 
+
+
 // WIFI CONFIG - Update these with values suitable for your network.
 WiFiClient wifiClient;
 //
@@ -41,20 +45,22 @@ const char* password = "99334994";
 const char* mqtt_server = "192.168.1.150"; // Raspberry pi has a static ip 192.168.1.150
 
 // MESSAGE BROKER CONFIG
-PubSubClient client(wifiClient);
 const char* publishTopic = "events";
+PubSubClient client(wifiClient);
 
 // OTA CONFIG
 bool ota_flag = true;
 int time_elapsed = 0;
+
+
 
 // LED CONFIG
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 bool LED_PULSE_MODE = false;
 bool ledSwitched = false;
 float fadeOutTimeDivider = 1;
-int ledMaxBrightness = 210;
-int ledMinBrightness = 20;
+int ledMaxBrightness = 250;
+int ledMinBrightness = 60;
 int pulseFactor = 1;
 bool ANIMATION_MODE = false;
 
@@ -71,12 +77,9 @@ float maxRatio = 255;
 float redRatio = maxRatio;
 float greenRatio = maxRatio;
 float blueRatio = maxRatio;
-int hitIntensity = 0;
 int calculatedIntensity = 0;
-int hitIntensityMin = 50;
-int hitIntensityMax = 750;
-
-
+int hitIntensityMin = 60;
+int hitIntensityMax = 800;
 
 char* unconfiguredSpheres[] = { "03","02","01","18","21","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64" };
 char* configuredSpheres[] = { "04","05","06","07","08","09","10","11","12","13","14","15","16","17","20","22","23","24","25" };
@@ -96,17 +99,24 @@ void setup() {
     Serial.println(WiFi.macAddress());
   }
 
-  setup_wifi();
-  setup_OTA();
+  if(!networkCapable){
+    HIT_INTENSITY_MODE = false;
+  }
 
-
-
+  if(networkCapable){
+    setup_wifi();
+    setup_OTA();
+  }
+  
   // Initialize LEDs
   pixels.begin();
   pixels.show();
 
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
+  if(networkCapable){
+    client.setServer(mqtt_server, 1883);
+    client.setCallback(callback);
+  }
+  
 
   configureSphereType();
 
@@ -119,13 +129,19 @@ void setup() {
 
 void loop() {
 
-  checkOTAflag();
+  if(networkCapable){
+    checkOTAflag();
+  }
+  
 
   readSensorValue();
   calculateTreshold();
   detectCollision();
   updateLEDs();
-  ensureConnection();
+
+  if(networkCapable){
+    ensureConnection();
+  }
 }
 
 void configureSphereType(){
@@ -294,8 +310,6 @@ void registerHit(){
   if(HIT_INTENSITY_MODE){
     Serial.print("calculated intensity: ");
     Serial.print(calculatedIntensity);
-    Serial.print("vs: ");
-    Serial.println(hitIntensity);
   }
 
   if(HIT_INTENSITY_MODE){
@@ -315,6 +329,8 @@ void registerHit(){
         fadeValue = ledMinBrightness;
       }
     }
+  }else {
+    fadeValue = ledMaxBrightness;
   }
   
   emitCollisionSignals();
@@ -333,10 +349,10 @@ void emitCollisionSignals() {
     String hitReportDraft = "xx 000";
     hitReportDraft[0] = ((String)assigned_id)[0];
     hitReportDraft[1] = ((String)assigned_id)[1];
-    int intensityDigits = ((String)hitIntensity).length();
+    int intensityDigits = ((String)calculatedIntensity).length();
     
     for(int i = 0; i < intensityDigits + 1; i++){
-      hitReportDraft[6-i] = ((String)hitIntensity)[intensityDigits-i];
+      hitReportDraft[6-i] = ((String)calculatedIntensity)[intensityDigits-i];
     }
   
     if(HIT_INTENSITY_MODE){
@@ -530,7 +546,7 @@ void callback(char* topic, byte* payload, unsigned int messageLength) {
     }
   } 
 
-// SET ALL ESPS COLOR 
+  // SET ALL ESPS COLOR 
   if (strcmp(topic,"set-all-color")==0){
     char hexNumeral[8];
     for (int i = 0; i < messageLength; i++) {
@@ -548,9 +564,47 @@ void callback(char* topic, byte* payload, unsigned int messageLength) {
     hexNumeral[7] = (char)'\0';
     String hexString = hexNumeral;
 
-    Serial.print("changing all esp color");
+    Serial.println("changing all esp color");
     
     setSphereColor(hexString);
+
+  } 
+
+  // SET ALL ESPS LED MAX BRIGHTNESS 
+  if (strcmp(topic,"set-all-brightness-max")==0){
+    char hexNumeral[8];
+    for (int i = 0; i < messageLength; i++) {
+      Serial.print((char)payload[i]);
+    }
+    Serial.println();
+    
+    hexNumeral[0] = (char)payload[0];
+    hexNumeral[1] = (char)payload[1];
+    hexNumeral[2] = (char)payload[2];
+    hexNumeral[3] = (char)'\0';
+    String hexString = hexNumeral;
+
+    Serial.println("changing all esp brighness max");
+
+    ledMaxBrightness = hexString.toInt();;
+  } 
+
+  // SET ALL ESPS LED MIN BRIGHTNESS 
+  if (strcmp(topic,"set-all-brightness-min")==0){
+    char hexNumeral[8];
+    for (int i = 0; i < messageLength; i++) {
+      Serial.print((char)payload[i]);
+    }
+    Serial.println();
+    
+    hexNumeral[0] = (char)payload[0];
+    hexNumeral[1] = (char)payload[1];
+    hexNumeral[2] = (char)'\0';
+    String hexString = hexNumeral;
+
+    Serial.println("changing all esp min brightness");
+    
+    ledMinBrightness = hexString.toInt();
 
   } 
 
@@ -598,7 +652,18 @@ void callback(char* topic, byte* payload, unsigned int messageLength) {
     }
   }  
 
+  // SET ALL ESPS ANIMATION MODE ON
+  if (strcmp(topic,"set-all-animation-mode-on")==0){
+    Serial.println("setting on animation for all");
+    activateAnimationMode();
+  } 
 
+  // SET ALL ESPS ANIMATION MODE ON
+  if (strcmp(topic,"set-all-animation-mode-off")==0){
+    Serial.println("setting off animation for all");
+    deactivateAnimationMode();
+  } 
+  
   
 }
 
@@ -640,6 +705,11 @@ void reconnect() {
       client.subscribe("animation-mode-off");
       client.subscribe("set-color");
       client.subscribe("set-all-color");
+      client.subscribe("set-all-brightness-min");
+      client.subscribe("set-all-brightness-max");
+      client.subscribe("set-all-animation-mode-on");
+      client.subscribe("set-all-animation-mode-off");
+      
       client.subscribe("reset");
     } else {
       Serial.print("failed, rc=");
