@@ -9,8 +9,8 @@
 #include <ArduinoOTA.h>
 
 /// IMPORTANT change the last digit of the following three lines to give unique identifier
-const char* assigned_id = "06";
-const char* id = "ESP06";
+const char* assigned_id = "08";
+const char* id = "ESP08";
 bool networkCapable = true;
 
 const char* resetID = assigned_id;
@@ -81,8 +81,8 @@ int calculatedIntensity = 0;
 int hitIntensityMin = 60;
 int hitIntensityMax = 800;
 
-char* unconfiguredSpheres[] = { "03","02","01","18","21","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64" };
-char* configuredSpheres[] = { "04","05","06","07","08","09","10","11","12","13","14","15","16","17","20","22","23","24","25" };
+char* unconfiguredSpheres[] = { "01","02","03","18" };
+char* configuredSpheres[] = { "04","05","06","07","08","09","10","11","12","13","14","15","16","17","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64" };
 char* problematicSpheres[] = { "19" };
 
 void setup() {

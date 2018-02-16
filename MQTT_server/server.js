@@ -57,7 +57,7 @@ io.on('connection', function(socket){
 var mqtt = require('mqtt'); 
  
 // Initialize MQTT connection, force clean flag to be false so connections are reestablished
-var mqttClient = mqtt.connect('mqtt://localhost:1883', {  
+var mqttClient = mqtt.connect('mqtt://192.168.1.150:1883', {  
     clean: false,
     clientId: 'nodeServer'
 });
